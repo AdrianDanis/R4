@@ -1,0 +1,10 @@
+[package]
+name = "r4"
+version = "0.0.1"
+authors = ["Adrian Danis <adriandanis88@gmail.com>"]
+
+[features]
+disable_float = []
+
+[lib]
+crate-type = ["staticlib"]
