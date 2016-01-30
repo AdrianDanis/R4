@@ -6,6 +6,11 @@ SECTIONS {
     /* We load physically to 1M */
     . = 1M;
 
+    /* Place the header first */
+    .multiboot . : {
+        KEEP(*(.multiboot))
+    }
+
     /* Place phys code/data etc here */
     .phys . : {
         *(.phys.text)
