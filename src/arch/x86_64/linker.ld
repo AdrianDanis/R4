@@ -2,25 +2,46 @@ ENTRY(_start)
 
 OUTPUT_FORMAT(elf64-x86-64)
 
+KERNEL_OFFSET = 0xffffffff80000000;
+
 SECTIONS {
     /* We load physically to 1M */
     . = 1M;
 
-    /* Place the header first */
-    .multiboot . : {
-        KEEP(*(.multiboot))
-    }
-
     /* Place phys code/data etc here */
-    .phys . : {
+    .phys . : AT(ADDR(.phys)) {
+        /* Place the header first */
+        KEEP(*(.multiboot))
         *(.phys.text)
-        *(.phys)
-        *(.phys.*)
-        *(.text)
+        *(.phys.data)
     }
 
-   /DISCARD/ :
+    . = . + KERNEL_OFFSET;
+
+    .text . : AT(ADDR(.text) - KERNEL_OFFSET) {
+        *(.text)
+        *(.text.*)
+    }
+
+    .rodata . : AT(ADDR(.rodata) - KERNEL_OFFSET) {
+        *(.rodata)
+        *(.rodata.*)
+    }
+
+    .data . : AT(ADDR(.data) - KERNEL_OFFSET) {
+        *(.data)
+        *(.data.*)
+    }
+
+    .bss . : AT(ADDR(.bss) - KERNEL_OFFSET) {
+        *(.bss)
+        *(.bss.*)
+        *(COMMON)
+    }
+
+    /DISCARD/ :
     {
+        *(.eh_frame)
         *(.note.gnu.build-id)
         *(.comment)
     }
