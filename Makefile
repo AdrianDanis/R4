@@ -28,7 +28,7 @@ ofiles := $(patsubst src/arch/$(ARCH)/%.S, \
 all: $(KERNEL)
 
 $(KERNEL): $(KERNEL)-elf64
-	objcopy -O elf32-i386 $< $@
+	objcopy --strip-unneeded -O elf32-i386 $< $@
 
 $(KERNEL)-elf64: $(ofiles) lib $(LINKER_SCRIPT) lib
 	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB)

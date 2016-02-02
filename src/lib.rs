@@ -1,6 +1,8 @@
 #![feature(lang_items)]
 #![no_std]
 
+pub mod arch;
+
 #[no_mangle]
 pub extern fn rust_main() {}
 

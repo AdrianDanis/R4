@@ -1,4 +1,5 @@
 .global _start
+.extern boot_system
 
 .section .phys.text, "ax"
 
@@ -75,6 +76,7 @@ _start:
     /* Switch to temporary kernel stack to use until we can
      * set up proper kernel mappings */
     leal phys_stack_top, %esp
+    movl %esp, %ebp
 
     /* Stash the things we got from MultiBoot
        www.gnu.org/software/grub/manual/multiboot
@@ -117,7 +119,15 @@ _tramp_64:
 .code64
 
 _head64:
-    jmp _head64
+    /* Make the stack pointer have a canonical form address */
+    movq $0xffffffff80000000, %rax
+    addq %rax, %rsp
+    addq %rax, %rbp
+    call boot_system
+    /* Shouldn't return here */
+1:
+    hlt
+    jmp 1b
 
 .section .phys.data, "a"
 gdt64_ptr:
