@@ -7,4 +7,7 @@ pub extern fn boot_system() {
      * with a real config call and init */
     let mut plat = get_platform(&BootConfig);
     plat.init_serial();
+    plat.putchar(b'R');
+    plat.putchar(b'4');
+    plat.putchar(b'\n');
 }

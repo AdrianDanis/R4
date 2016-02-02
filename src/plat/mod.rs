@@ -4,6 +4,7 @@ use config::BootConfig;
 
 pub trait PlatInterface {
     fn init_serial(&mut self);
+    fn putchar(&mut self, c: u8);
 }
 
 /* This wrapper exists to ensure the concrete plat_get_platform

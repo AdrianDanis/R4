@@ -8,3 +8,6 @@ disable_float = []
 
 [lib]
 crate-type = ["staticlib"]
+
+[dependencies]
+rlibc = "1.0.0"

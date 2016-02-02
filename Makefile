@@ -10,8 +10,10 @@ DEBUG := y
 
 ifeq ($(DEBUG), y)
 	KERNEL_LIB := target/$(TARGET)/debug/libr4.a
+	RUST_DEPS := $(wildcard target/$(TARGET)/debug/deps/*)
 else
 	KERNEL_LIB := target/$(TARGET)/release/libr4.a
+	RUST_DEPS := $(wildcard target/$(TARGET)/release/deps/*)
 	CARGOFLAGS += --release
 endif
 
@@ -31,7 +33,7 @@ $(KERNEL): $(KERNEL)-elf64
 	objcopy --strip-unneeded -O elf32-i386 $< $@
 
 $(KERNEL)-elf64: $(ofiles) lib $(LINKER_SCRIPT) lib
-	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB)
+	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB) $(RUST_DEPS)
 
 lib:
 	cargo rustc --target $(TARGET) --features disable_float $(CARGOFLAGS) --verbose -- $(RUSTFLAGS)
