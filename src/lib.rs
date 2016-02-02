@@ -2,6 +2,8 @@
 #![no_std]
 
 pub mod arch;
+mod plat;
+mod config;
 
 #[no_mangle]
 pub extern fn rust_main() {}
