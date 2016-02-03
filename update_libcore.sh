@@ -2,7 +2,7 @@
 
 set -e
 
-target=x86_64-r4-none
+target=x86_64-r4-softfloat
 # Locate our multirust path
 rustc=`multirust which rustc | sed 's/\/bin\/rustc$//'`
 # Location to store built libraries to

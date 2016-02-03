@@ -1,6 +1,6 @@
 #TODO: Refactor some of this to support options etc for other architectures
 ARCH := x86_64
-TARGET := $(ARCH)-r4-none
+TARGET := $(ARCH)-r4-softfloat
 LDFLAGS := -nostdlib -Wl,-n -Wl,--gc-sections -Wl,--build-id=none
 ASFLAGS :=
 CARGOFLAGS :=
