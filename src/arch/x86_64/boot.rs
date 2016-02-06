@@ -39,6 +39,10 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
      * really bad that happens */
     panic_set_plat(&mut plat);
     /* Now we can continue with the rest of init */
+    if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
+        write!(plat,"Invalid multiboot signature!\nExpected {} got {} with pointer {:?}\n", multiboot::SIGNATURE_RAX, init.mbi_magic, init.mbi).unwrap();
+        return Err(plat);
+    }
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 

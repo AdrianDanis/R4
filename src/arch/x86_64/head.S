@@ -125,6 +125,8 @@ _head64:
     movq $0xffffffff80000000, %rax
     addq %rax, %rsp
     addq %rax, %rbp
+    popq %rsi
+    popq %rdi
     call boot_system
     /* Shouldn't return here */
 1:
