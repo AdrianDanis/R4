@@ -34,7 +34,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
      * we can get debugging output. */
     let mut plat = get_platform(&BootConfig);
     plat.init_serial();
-    if let Err(_) = write!(plat, "R4: In early setup") { return Err(plat); }
+    if let Err(_) = write!(plat, "R4: In early setup\n") { return Err(plat); }
     /* Initialize the panic function so we can see anything
      * really bad that happens */
     panic_set_plat(&mut plat);
@@ -73,7 +73,7 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) {
         };
         boot = match try_early_boot_system(boot_state) {
             Err(mut plat) => {
-                    write!(plat, "Failed early init. hlt'ing").unwrap();
+                    write!(plat, "Failed early init. hlt'ing\n").unwrap();
                     halt();
                 },
             Ok(b) => b,
