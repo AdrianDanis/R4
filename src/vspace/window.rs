@@ -1,4 +1,5 @@
 use core::intrinsics::transmute;
+use core::num::Wrapping;
 
 pub unsafe trait VSpaceWindow<'a> {
     fn base(&self) -> usize;
@@ -24,6 +25,6 @@ pub unsafe trait VSpaceWindow<'a> {
          * then subtracting `s` will either correct if the range is
          * valid, or not correct in which case the range is invalid
          * and the comparison will fail */
-        b >= self.base() && b <= self.base() + self.size() - s
+        b >= self.base() && b <= (Wrapping(self.base()) + Wrapping(self.size()) - Wrapping(s)).0
     }
 }
