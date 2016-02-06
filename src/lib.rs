@@ -5,6 +5,8 @@
 pub mod arch;
 mod plat;
 mod config;
+mod vspace;
+mod util;
 
 #[no_mangle]
 pub extern fn rust_main() {}

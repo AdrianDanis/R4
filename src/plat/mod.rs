@@ -1,7 +1,9 @@
 mod pc99;
-use self::pc99::*;
+use self::pc99::plat_get_platform;
 use config::BootConfig;
 use ::core::fmt;
+
+pub use self::pc99::PlatInterfaceType;
 
 pub trait PlatInterface {
     fn init_serial(&mut self);

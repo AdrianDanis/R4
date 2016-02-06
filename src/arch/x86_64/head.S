@@ -81,7 +81,9 @@ _start:
     /* Stash the things we got from MultiBoot
        www.gnu.org/software/grub/manual/multiboot
      */
+    pushl $0
     pushl %eax /* magic (check this later) */
+    pushl $0
     pushl %ebx /* info */
 
     /* Reset EFLAGS to disable interrupts */
