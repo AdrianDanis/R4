@@ -54,7 +54,7 @@ fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multi
 /* We create a wrapper struct because I don't know how else
  * to get the lifetime of the return value of callback function
  * to line up with the multiboot lifetime */
-struct mbi_wrapper<'a> {
+struct MbiWrapper<'a> {
     mbi: Option<multiboot::Multiboot<'a>>,
     callback: &'a Fn(u64, usize) -> Option<&'a [u8]>,
 }
@@ -79,7 +79,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
         write!(plat,"Invalid multiboot signature!\nExpected {} got {} with pointer {:?}\n", multiboot::SIGNATURE_RAX, init.mbi_magic, init.mbi).unwrap();
         return Err(plat);
     }
-    let mut mbi = mbi_wrapper{mbi: None, callback: &|p, s| unsafe {
+    let mut mbi = MbiWrapper{mbi: None, callback: &|p, s| unsafe {
         Some(init.low_window.make_slice(p as usize, s))
         }};
     unsafe {
@@ -91,7 +91,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
         mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
             Some(mbi) => Some(mbi),
             None => {
-                write!(plat,"Failed to create multiboot!\n");
+                write!(plat,"Failed to create multiboot!\n").unwrap();
                 return Err(plat)
                 }
             };
