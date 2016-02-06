@@ -11,4 +11,5 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0.0"
-multiboot = "0.2.0"
+#multiboot = "0.2.0"
+multiboot = {git = "https://github.com/AdrianDanis/rust-multiboot"}

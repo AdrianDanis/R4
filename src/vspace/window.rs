@@ -1,11 +1,19 @@
 use core::intrinsics::transmute;
 use core::num::Wrapping;
+use core::mem::size_of;
+use core::slice;
 
 pub unsafe trait VSpaceWindow<'a> {
     fn base(&self) -> usize;
     fn size(&self) -> usize;
-    unsafe fn make<T>(&self) -> &'a T {
+    unsafe fn make<T: Sized>(&self, b: usize) -> &'a T {
         unimplemented!()
+    }
+    unsafe fn make_slice<T: Sized>(&self, b:usize, num: usize) -> &'a [T] {
+        if !self.range_valid(b, size_of::<T>() * num) {
+            panic!("Cannot make array with {} elements at {}", num, b);
+        }
+        return slice::from_raw_parts(transmute(b), num);
     }
     /* Passing in a window to describe the window you want to create
      * is a little backwards, but it provides the nicest API as far

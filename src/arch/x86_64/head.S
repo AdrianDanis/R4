@@ -156,7 +156,7 @@ gdt64:
 
 .align 8
 phys_stack_bottom:
-    .fill 4096
+    .fill 16384
 phys_stack_top:
 .align 4096
 phys_pml4:

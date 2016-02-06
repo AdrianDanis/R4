@@ -23,6 +23,42 @@ struct PostEarlyBootState<'a> {
     phantom: PhantomData<&'a usize>,
 }
 
+fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multiboot<'a>) {
+    write!(plat, "Multiboot information:\n").unwrap();
+    if let Some(low) = mbi.lower_memory_bound() {
+        write!(plat,"\t{}kb of low memory\n", low).unwrap();
+    }
+    if let Some(high) = mbi.upper_memory_bound() {
+        write!(plat,"\t{}mb of high memory\nn", high / 1024).unwrap();
+    }
+    if let Some(boot) = mbi.boot_device() {
+        write!(plat,"\tBoot device {:?}\n", boot).unwrap();
+    }
+    if let Some(line) = mbi.command_line() {
+        write!(plat,"\tCommand line \"{}\"\n", line).unwrap();
+    }
+    if let Some(modules) = mbi.modules() {
+        write!(plat,"Multiboot modules:\n").unwrap();
+        for m in modules {
+            write!(plat,"\t{:?}\n", m).unwrap();
+        }
+    }
+    if let Some(memory) = mbi.memory_regions() {
+        write!(plat,"Memory regions:\n").unwrap();
+        for m in memory {
+            write!(plat,"\t{:?}\n", m).unwrap();
+        }
+    }
+}
+
+/* We create a wrapper struct because I don't know how else
+ * to get the lifetime of the return value of callback function
+ * to line up with the multiboot lifetime */
+struct mbi_wrapper<'a> {
+    mbi: Option<multiboot::Multiboot<'a>>,
+    callback: &'a Fn(u64, usize) -> Option<&'a [u8]>,
+}
+
 /* Try and boot the system, potentially returning an error.
  * Since if we fail there is no way to display or do anything
  * with the error we do do not bother to have an error type
@@ -34,7 +70,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
      * we can get debugging output. */
     let mut plat = get_platform(&BootConfig);
     plat.init_serial();
-    if let Err(_) = write!(plat, "R4: In early setup\n") { return Err(plat); }
+    write!(plat, "R4: In early setup\n").unwrap();
     /* Initialize the panic function so we can see anything
      * really bad that happens */
     panic_set_plat(&mut plat);
@@ -42,6 +78,26 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
         write!(plat,"Invalid multiboot signature!\nExpected {} got {} with pointer {:?}\n", multiboot::SIGNATURE_RAX, init.mbi_magic, init.mbi).unwrap();
         return Err(plat);
+    }
+    let mut mbi = mbi_wrapper{mbi: None, callback: &|p, s| unsafe {
+        Some(init.low_window.make_slice(p as usize, s))
+        }};
+    unsafe {
+        /* Thanks to the stupidy in this function interface of requiring
+         * an unsafe function we cannot pass a lambda expression. Since
+         * a lambda cannot be made unsafe and we have no other way of
+         * passing our state we just transmute the lambda. Unfortunately
+         * this removes all type checking on our function :( */
+        mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
+            Some(mbi) => Some(mbi),
+            None => {
+                write!(plat,"Failed to create multiboot!\n");
+                return Err(plat)
+                }
+            };
+        if let &Some(ref mbi) = &mbi.mbi {
+            display_multiboot(&mut plat, &mbi);
+        }
     }
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
