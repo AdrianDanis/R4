@@ -7,7 +7,10 @@ pub unsafe trait VSpaceWindow<'a> {
     fn base(&self) -> usize;
     fn size(&self) -> usize;
     unsafe fn make<T: Sized>(&self, b: usize) -> &'a T {
-        unimplemented!()
+        if !self.range_valid(b, size_of::<T>()) {
+            panic!("Cannot make object at {}", b);
+        }
+        return transmute(b);
     }
     unsafe fn make_slice<T: Sized>(&self, b:usize, num: usize) -> &'a [T] {
         if !self.range_valid(b, size_of::<T>() * num) {
