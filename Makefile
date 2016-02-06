@@ -45,3 +45,8 @@ build/arch/$(ARCH)/%.o: src/arch/$(ARCH)/%.S
 clean:
 	cargo clean
 	rm -rf build
+
+doc: lib
+	export RUSTDOC=`pwd`/rustdoc.sh
+	echo $$RUSTDOC
+	cargo doc
