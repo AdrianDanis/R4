@@ -2,6 +2,7 @@
 name = "r4"
 version = "0.0.1"
 authors = ["Adrian Danis <adriandanis88@gmail.com>"]
+license = "MIT"
 
 [features]
 disable_float = []
