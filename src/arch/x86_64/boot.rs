@@ -5,12 +5,15 @@ use ::config::BootConfig;
 use ::core::fmt::Write;
 use ::core::marker::PhantomData;
 use ::core::default::Default;
+use super::halt::halt;
 use super::vspace::*;
 extern crate multiboot;
 
 struct EarlyBootState<'h, 'l> {
     high_window : &'h BootHighWindow<'h>,
     low_window : &'l BootLowWindow<'l>,
+    mbi_magic: usize,
+    mbi: *const usize,
 }
 
 struct PostEarlyBootState<'a> {
@@ -26,15 +29,16 @@ struct PostEarlyBootState<'a> {
  * This is specifically the 'early' boot as it happens before
  * we switch to the final kernel address space
  */
-fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
-    /* Our current goal is to get this code working
-     * with a real config call and init */
+fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, PlatInterfaceType> {
+    /* Initial the serial output of our platform first so that
+     * we can get debugging output. */
     let mut plat = get_platform(&BootConfig);
     plat.init_serial();
+    if let Err(_) = write!(plat, "R4: In early setup") { return Err(plat); }
     /* Initialize the panic function so we can see anything
      * really bad that happens */
     panic_set_plat(&mut plat);
-    try!(write!(plat,"R4\n").or(Err(())));
+    /* Now we can continue with the rest of init */
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 
@@ -61,8 +65,19 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) {
         }
         /* whilst doing early boot we can also access things in low memory */
         let boot_low_window = BootLowWindow::default();
-        let boot_state = EarlyBootState {high_window: &boot_high_window, low_window: &boot_low_window};
-        boot = try_early_boot_system(boot_state).unwrap();
+        let boot_state = EarlyBootState {
+            high_window: &boot_high_window,
+            low_window: &boot_low_window,
+            mbi_magic: magic,
+            mbi: mbi,
+        };
+        boot = match try_early_boot_system(boot_state) {
+            Err(mut plat) => {
+                    write!(plat, "Failed early init. hlt'ing").unwrap();
+                    halt();
+                },
+            Ok(b) => b,
+        };
         /* The 'plat' definition got moved into boot. Reset the panic location */
         panic_set_plat(&mut boot.plat);
     }
