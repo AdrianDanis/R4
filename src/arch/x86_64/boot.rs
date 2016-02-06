@@ -1,10 +1,12 @@
 use plat::*;
 use vspace::*;
+use panic::*;
 use ::config::BootConfig;
 use ::core::fmt::Write;
 use ::core::marker::PhantomData;
 use ::core::default::Default;
 use super::vspace::*;
+extern crate multiboot;
 
 struct EarlyBootState<'h, 'l> {
     high_window : &'h BootHighWindow<'h>,
@@ -29,6 +31,9 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
      * with a real config call and init */
     let mut plat = get_platform(&BootConfig);
     plat.init_serial();
+    /* Initialize the panic function so we can see anything
+     * really bad that happens */
+    panic_set_plat(&mut plat);
     try!(write!(plat,"R4\n").or(Err(())));
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
@@ -58,5 +63,8 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) {
         let boot_low_window = BootLowWindow::default();
         let boot_state = EarlyBootState {high_window: &boot_high_window, low_window: &boot_low_window};
         boot = try_early_boot_system(boot_state).unwrap();
+        /* The 'plat' definition got moved into boot. Reset the panic location */
+        panic_set_plat(&mut boot.plat);
     }
+    unimplemented!()
 }
