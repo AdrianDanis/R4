@@ -6,7 +6,7 @@ ASFLAGS :=
 CARGOFLAGS :=
 RUSTFLAGS := -Z no-landing-pads
 GCC := gcc
-DEBUG := y
+DEBUG ?= y
 
 ifeq ($(DEBUG), y)
 	KERNEL_LIB := target/$(TARGET)/debug/libr4.a
