@@ -14,7 +14,7 @@ const HIGH_BOOT_MAPPING_BASE: usize = 0xffffffff80000000;
 const HIGH_BOOT_MAPPING_SIZE: usize = util::GB;
 /* Actual kernel window covers the top 2^39 bits of memory */
 const KERNEL_MAPPING_BASE: usize = 0xffffff8000000000;
-const KERNEL_MAPPING_SIZE: usize = 0x800000000;
+const KERNEL_MAPPING_SIZE: usize = 0x8000000000;
 
 pub struct BootLowWindow<'a>(PhantomData<&'a usize>);
 pub struct BootHighWindow<'a>(PhantomData<&'a usize>);
