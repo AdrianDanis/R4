@@ -1,3 +1,4 @@
+use arch::halt;
 use plat::*;
 use core::ptr::Unique;
 use core::fmt::{Write, Arguments};
@@ -21,5 +22,5 @@ pub fn panic_set_plat(plat: &mut PlatInterfaceType) {
             write!(plat, "{}:{} {}\n", file, line, fmt).unwrap();
         }
     }
-    loop {}
+    halt();
 }
