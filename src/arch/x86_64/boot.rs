@@ -68,7 +68,7 @@ struct MbiWrapper<'a> {
 fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, PlatInterfaceType> {
     /* Initial the serial output of our platform first so that
      * we can get debugging output. */
-    let mut plat = get_platform(&BootConfig);
+    let mut plat = unsafe {get_platform(&BootConfig)};
     plat.init_serial();
     write!(plat, "R4: In early setup\n").unwrap();
     /* Initialize the panic function so we can see anything

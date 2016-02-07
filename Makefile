@@ -7,6 +7,9 @@ CARGOFLAGS :=
 RUSTFLAGS := -Z no-landing-pads
 GCC := gcc
 DEBUG ?= y
+RUSTDOC=$(shell pwd)/rustdoc.sh
+
+export RUSTDOC
 
 ifeq ($(DEBUG), y)
 	KERNEL_LIB := target/$(TARGET)/debug/libr4.a
@@ -47,6 +50,5 @@ clean:
 	rm -rf build
 
 doc: lib
-	export RUSTDOC=`pwd`/rustdoc.sh
 	echo $$RUSTDOC
 	cargo doc
