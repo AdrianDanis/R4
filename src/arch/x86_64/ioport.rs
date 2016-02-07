@@ -1,3 +1,17 @@
+//! Low level I/O port interface
+//!
+//! This module provides an extremely unsafe and low level I/O port
+//! bindings. No attempt is made to prevent concurrent I/O port accesses,
+//! or to prevent general sharing of I/O port ranges
+//!
+//! # Safety
+//!
+//! For all functions here you must ensure there are no other users of I/O
+//! ports that either overlap, or are from the same device
+//!
+//! Accessing I/O ports can do absolutely anything (including powering off
+//! the machine)
+
 pub unsafe fn ioport_in8(base: u16) -> u8 {
     let ret : u8;
     asm!("inb $1, $0" : "={al}"(ret) : "{dx}N"(base));

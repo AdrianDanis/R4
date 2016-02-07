@@ -1,3 +1,15 @@
+//! Rust entry point
+//!
+//! Boot is split into two parts
+//!
+//! + Early boot where we walk hardware data structures and setup initial
+//!   machine state before
+//! + Late boot where we are operating in the final kernel window and can
+//!   setup the initial user environment
+//!
+//! Early boot is extremely architecture specific, late boot is mostly
+//! generic.
+
 use plat::*;
 use vspace::*;
 use panic::*;
@@ -9,6 +21,7 @@ use super::halt::halt;
 use super::vspace::*;
 extern crate multiboot;
 
+/// Package of state that is passed to the early boot fun
 struct EarlyBootState<'h, 'l> {
     high_window : &'h BootHighWindow<'h>,
     low_window : &'l BootLowWindow<'l>,
@@ -114,7 +127,7 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) {
      * from it as having the same lifetime. This allows any references
      * created from the boot high kernel window being able to live on
      * into the final kernel window */
-    let final_window = KernelWindow::default();
+    let final_window = unsafe{KernelWindow::default()};
     /* this variable will hold our system state as returned by early boot */
     let mut boot;
     {
@@ -124,7 +137,7 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) {
             boot_high_window = final_window.subwindow(BootHighWindow::default());
         }
         /* whilst doing early boot we can also access things in low memory */
-        let boot_low_window = BootLowWindow::default();
+        let boot_low_window = unsafe {BootLowWindow::default()};
         let boot_state = EarlyBootState {
             high_window: &boot_high_window,
             low_window: &boot_low_window,

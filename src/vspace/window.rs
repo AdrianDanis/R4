@@ -92,7 +92,7 @@ pub unsafe trait VSpaceWindow<'a> {
     ///
     /// Subwindows should only be created outside of this function to be
     /// passed into this function
-    unsafe fn subwindow<'i, I, O: ?Sized>(&self, window: I) -> &'a O where O: VSpaceWindow<'a> + Default, I: VSpaceWindow<'i> {
+    unsafe fn subwindow<'i, I, O: ?Sized>(&self, window: I) -> &'a O where O: VSpaceWindow<'a>, I: VSpaceWindow<'i> {
         /* Validate the range for this window */
         if !self.range_valid(window.base(), window.size()) {
             panic!("Cannot construct window with range {} {}, from {} {}");
@@ -110,4 +110,12 @@ pub unsafe trait VSpaceWindow<'a> {
          * and the comparison will fail */
         b >= self.base() && b <= (Wrapping(self.base()) + Wrapping(self.size()) - Wrapping(s)).0
     }
+    /// Return the default construction of a window
+    ///
+    /// # Safety
+    ///
+    /// Only windows that are actually valid should be constructed.
+    /// Invalid windows can be constructed, but must not be used until
+    /// they become valid
+    unsafe fn default() -> Self;
 }
