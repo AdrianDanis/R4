@@ -21,21 +21,32 @@ use super::halt::halt;
 use super::vspace::*;
 extern crate multiboot;
 
-/// Package of state that is passed to the early boot fun
+/// Package of state that is passed to the early boot function
 struct EarlyBootState<'h, 'l> {
+    /// Referenece to the high window. Objects created from here can
+    /// persist forever, and as such references to them can be returned
+    /// in `PostEarlyBootState`
     high_window : &'h BootHighWindow<'h>,
+    /// Reference to the low window. References to objects from here
+    /// cannot be returned in `PostEarlyBootState`
     low_window : &'l BootLowWindow<'l>,
+    /// The value of EAX passed from the assembly entry. This is checked
+    /// to ensure we were multiboot loaded
     mbi_magic: usize,
+    /// Raw physical pointer that should point to the multiboot structure
     mbi: *const usize,
 }
 
+/// Package of state that is returned as a result of early boot
 struct PostEarlyBootState<'a> {
+    /// An initialized platform interface
     plat: PlatInterfaceType,
-    /* currently just PhantomData as don't have anything
-     * to return with a lifetime */
+    /// Currently the lifetime 'a is unused, so have some `PhantomData` to get
+    /// around that
     phantom: PhantomData<&'a usize>,
 }
 
+/// Debug function to print out the contents of the multiboot information
 fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multiboot<'a>) {
     write!(plat, "Multiboot information:\n").unwrap();
     if let Some(low) = mbi.lower_memory_bound() {
@@ -64,20 +75,19 @@ fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multi
     }
 }
 
-/* We create a wrapper struct because I don't know how else
- * to get the lifetime of the return value of callback function
- * to line up with the multiboot lifetime */
+/// We create a wrapper struct because I don't know how else
+/// to get the lifetime of the return value of callback function
+/// to line up with the multiboot lifetime
 struct MbiWrapper<'a> {
     mbi: Option<multiboot::Multiboot<'a>>,
     callback: &'a Fn(u64, usize) -> Option<&'a [u8]>,
 }
 
-/* Try and boot the system, potentially returning an error.
- * Since if we fail there is no way to display or do anything
- * with the error we do do not bother to have an error type
- * This is specifically the 'early' boot as it happens before
- * we switch to the final kernel address space
- */
+/// Try and boot the system, potentially returning an error.
+/// Since if we fail there is no way to display or do anything
+/// with the error we do do not bother to have an error type
+/// This is specifically the 'early' boot as it happens before
+/// we switch to the final kernel address space
 fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, PlatInterfaceType> {
     /* Initial the serial output of our platform first so that
      * we can get debugging output. */
@@ -115,12 +125,12 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 
-/* Represent the multiboot info pointer as a pointer to
- * a usize for the moment. This will allow us to get the
- * lifetimes correct, and we will fill in the correct
- * type later */
+/// Rust entry point for the kernel. This expects two parameters, one the
+/// boot info magic, and the other a raw pointer to the boot info structure.
+/// Additionally it expects that both the boot kernel windows are configured
+/// correctly in the active address space root
 #[no_mangle]
-pub extern fn boot_system(magic: usize, mbi: *const usize) {
+pub extern fn boot_system(magic: usize, mbi: *const usize) -> ! {
     /* This *will* be our final kernel window, but it is not our window
      * yet. We create it here so that our temporary high kernel window,
      * which is a subset of the final kernel window, can be constructed
