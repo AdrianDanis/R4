@@ -83,25 +83,27 @@ struct MbiWrapper<'a> {
     callback: &'a Fn(u64, usize) -> Option<&'a [u8]>,
 }
 
+fn make_bootconfig<'a>(mbi: &MbiWrapper<'a>) -> BootConfig<'a> {
+    let mut cmdline = "";
+    if let &Some(ref mbi) = &mbi.mbi {
+        if let Some(cmd) = mbi.command_line() {
+            cmdline = cmd;
+        }
+    }
+    return BootConfig::new(cmdline);
+}
+
 /// Try and boot the system, potentially returning an error.
 /// Since if we fail there is no way to display or do anything
 /// with the error we do do not bother to have an error type
 /// This is specifically the 'early' boot as it happens before
 /// we switch to the final kernel address space
-fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, PlatInterfaceType> {
-    /* Initial the serial output of our platform first so that
-     * we can get debugging output. */
-    let mut plat = unsafe {get_platform(&BootConfig)};
-    plat.init_serial();
-    write!(plat, "R4: In early setup\n").unwrap();
-    /* Initialize the panic function so we can see anything
-     * really bad that happens */
-    panic_set_plat(&mut plat);
-    /* Now we can continue with the rest of init */
+fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, Option<PlatInterfaceType>> {
+    /* check that we are multi-booted */
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
-        write!(plat,"Invalid multiboot signature!\nExpected {} got {} with pointer {:?}\n", multiboot::SIGNATURE_RAX, init.mbi_magic, init.mbi).unwrap();
-        return Err(plat);
+        return Err(None);
     }
+    /* construct a reference to the mbi to get the command line */
     let mut mbi = MbiWrapper{mbi: None, callback: &|p, s| unsafe {
         Some(init.low_window.make_slice(p as usize, s))
         }};
@@ -114,13 +116,30 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
         mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
             Some(mbi) => Some(mbi),
             None => {
-                write!(plat,"Failed to create multiboot!\n").unwrap();
-                return Err(plat)
+                    return Err(None);
                 }
             };
-        if let &Some(ref mbi) = &mbi.mbi {
-            display_multiboot(&mut plat, &mbi);
-        }
+    }
+    let bootconfig = make_bootconfig(&mbi);
+    /* Initial the serial output of our platform first so that
+     * we can get debugging output. */
+    let mut plat = unsafe {get_platform(&bootconfig)};
+    plat.init_serial();
+    write!(plat, "R4: In early setup\n").unwrap();
+    /* Initialize the panic function so we can see anything
+     * really bad that happens */
+    panic_set_plat(&mut plat);
+    /* Now we can continue with the rest of init */
+    if let &Some(ref mbi) = &mbi.mbi {
+        display_multiboot(&mut plat, &mbi);
+    }
+    write!(plat, "Straight commandline parts:\n").unwrap();
+    for cmd in bootconfig.cmdline_iter() {
+        write!(plat, "\t{}\n", cmd).unwrap();
+    }
+    write!(plat, "Commandline values:\n").unwrap();
+    for option in bootconfig.cmdline_option_iter() {
+        write!(plat, "\t{} = {}\n", option.name, option.value).unwrap();
     }
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
@@ -155,10 +174,12 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) -> ! {
             mbi: mbi,
         };
         boot = match try_early_boot_system(boot_state) {
-            Err(mut plat) => {
+            Err(Some(mut plat)) => {
                     write!(plat, "Failed early init. hlt'ing\n").unwrap();
                     halt();
                 },
+            Err(None) =>
+                halt(),
             Ok(b) => b,
         };
         /* The 'plat' definition got moved into boot. Reset the panic location */

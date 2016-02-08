@@ -43,7 +43,7 @@ unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
 
 unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
     fn base(&self) -> usize { KERNEL_MAPPING.0 }
-    fn size(&self) -> usize { KERNEL_MAPPING.0 }
+    fn size(&self) -> usize { KERNEL_MAPPING.1 }
     unsafe fn default() -> KernelWindow<'a> {
         KernelWindow(PhantomData)
     }
