@@ -1,5 +1,6 @@
 //! Boot configuration information for the kernel
 use core::str::Split;
+use util::*;
 
 /// Boot configuration parameters
 pub struct BootConfig<'a> {
@@ -20,6 +21,15 @@ impl<'a> BootConfig<'a> {
     /// Iterate over any A=B pairs in the command line
     pub fn cmdline_option_iter(&self) -> CommandLineOptionIter<'a> {
         CommandLineOptionIter { splits: self.cmdline_iter() }
+    }
+    /// Find a particular command line value
+    pub fn cmdline_option_find(&self, name: &str) -> Option<CommandLineOption> {
+        self.cmdline_option_iter().find(|ref s| s.name == name)
+    }
+    /// Retrieve an option by integer value
+    pub fn cmdline_option_from_str<T: FromStrExt>(&self, name: &str) -> Option<T> {
+        self.cmdline_option_find(name)
+            .and_then(|ref option| T::from_str_prefix(option.value).ok())
     }
 }
 

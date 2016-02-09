@@ -153,14 +153,6 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     if let &Some(ref mbi) = &mbi.mbi {
         display_multiboot(&mut plat, &mbi);
     }
-    write!(plat, "Straight commandline parts:\n").unwrap();
-    for cmd in bootconfig.cmdline_iter() {
-        write!(plat, "\t{}\n", cmd).unwrap();
-    }
-    write!(plat, "Commandline values:\n").unwrap();
-    for option in bootconfig.cmdline_option_iter() {
-        write!(plat, "\t{} = {}\n", option.name, option.value).unwrap();
-    }
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 

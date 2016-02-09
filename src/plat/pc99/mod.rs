@@ -7,6 +7,9 @@ use ::arch::x86_64::ioport::*;
 /// module
 pub type PlatInterfaceType = PC99Interface;
 
+/// By default we use serial port 0x3f8 for debug output
+const DEFAULT_DEBUG_PORT: u16 = 0x3f8;
+
 /// Run time state for the platform
 pub struct PC99Interface {
     /// Optional debug port. Tuple is of the form
@@ -14,10 +17,12 @@ pub struct PC99Interface {
     debug_port: Option<(bool, u16)>,
 }
 
+/// Helper function that waits for space on the FIFO of a standard uart
 unsafe fn serial_wait_ready(port: u16) {
     while (ioport_in8(port + 5) & 0x60) == 0 {}
 }
 
+/// Implementation of the generic platform interface for pc99
 impl PlatInterface for PC99Interface {
     /// Initialize the debug serial port
     /// We currently make no effort to construct a nice type and
@@ -63,7 +68,9 @@ impl PlatInterface for PC99Interface {
     }
 }
 
-pub fn plat_get_platform(_: &BootConfig) -> PC99Interface {
-    /* For now don't check the config and assume a debug port */
-    PC99Interface { debug_port: Some((false, 0x3f8))}
+/// Construct and return the public interface
+pub fn plat_get_platform(config: &BootConfig) -> PC99Interface {
+    let port = config.cmdline_option_from_str("--debug-port")
+        .unwrap_or(DEFAULT_DEBUG_PORT);
+    PC99Interface { debug_port: Some((false, port))}
 }
