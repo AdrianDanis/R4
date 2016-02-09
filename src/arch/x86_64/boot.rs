@@ -21,6 +21,14 @@ use super::halt::halt;
 use super::vspace::*;
 extern crate multiboot;
 
+extern {
+    /// Represent the start of the kernel image region. The type is not
+    /// correct as there is no way to properly represent the type we want
+    /// in Rust
+    static kernel_image_start: u8;
+    static kernel_image_end: u8;
+}
+
 /// Package of state that is passed to the early boot function
 struct EarlyBootState<'h, 'l> {
     /// Referenece to the high window. Objects created from here can
@@ -53,7 +61,7 @@ fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multi
         write!(plat,"\t{}kb of low memory\n", low).unwrap();
     }
     if let Some(high) = mbi.upper_memory_bound() {
-        write!(plat,"\t{}mb of high memory\nn", high / 1024).unwrap();
+        write!(plat,"\t{}mb of high memory\n", high / 1024).unwrap();
     }
     if let Some(boot) = mbi.boot_device() {
         write!(plat,"\tBoot device {:?}\n", boot).unwrap();
@@ -93,6 +101,12 @@ fn make_bootconfig<'a>(mbi: &MbiWrapper<'a>) -> BootConfig<'a> {
     return BootConfig::new(cmdline);
 }
 
+/// Convert the kernel image start and end variables from the linker script
+/// into useful values
+fn get_kernel_image_region() -> (usize, usize) {
+    (&kernel_image_start as *const u8 as usize, &kernel_image_end as *const u8 as usize)
+}
+
 /// Try and boot the system, potentially returning an error.
 /// Since if we fail there is no way to display or do anything
 /// with the error we do do not bother to have an error type
@@ -126,6 +140,12 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     let mut plat = unsafe {get_platform(&bootconfig)};
     plat.init_serial();
     write!(plat, "R4: In early setup\n").unwrap();
+    let (ki_start, ki_end) = get_kernel_image_region();
+    write!(plat, "Kernel imagine region {:x} {:x}\n", ki_start, ki_end).unwrap();
+    if !init.high_window.range_valid(ki_start, ki_end - ki_start) {
+        write!(plat, "Kernel image outside boot window!").unwrap();
+        return Err(Some(plat));
+    }
     /* Initialize the panic function so we can see anything
      * really bad that happens */
     panic_set_plat(&mut plat);

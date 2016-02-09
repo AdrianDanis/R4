@@ -18,6 +18,8 @@ SECTIONS {
 
     . = . + KERNEL_OFFSET;
 
+    kernel_image_start = .;
+
     .text . : AT(ADDR(.text) - KERNEL_OFFSET) {
         *(.text)
         *(.text.*)
@@ -38,6 +40,8 @@ SECTIONS {
         *(.bss.*)
         *(COMMON)
     }
+
+    kernel_image_end = .;
 
     /DISCARD/ :
     {
