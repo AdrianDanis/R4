@@ -153,6 +153,8 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     if let &Some(ref mbi) = &mbi.mbi {
         display_multiboot(&mut plat, &mbi);
     }
+    /* Perform early platform specific system initialization */
+    try!(unsafe{plat.early_init()});
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 

@@ -36,6 +36,13 @@ pub trait PlatInterface {
     /// If `init_serial` has not yet been called this will silently
     /// discard characters
     fn putchar(&mut self, c: u8);
+    /// Perform early platform initialization
+    ///
+    /// # Safety
+    ///
+    /// This function should only be called once, and only during the
+    /// early bootup phase of the system
+    unsafe fn early_init(&mut self) -> Result<(), ()>;
 }
 
 impl fmt::Write for PlatInterfaceType {

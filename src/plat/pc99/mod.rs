@@ -1,4 +1,5 @@
 //! PC99 platform definition
+mod pic;
 use ::plat::{PlatInterface};
 use ::config::{BootConfig};
 use ::arch::x86_64::ioport::*;
@@ -65,6 +66,11 @@ impl PlatInterface for PC99Interface {
                 }
             }
         }
+    }
+    unsafe fn early_init(&mut self) -> Result<(), ()> {
+        /* Need to disable the legacy PIC */
+        pic::disable();
+        return Ok(());
     }
 }
 
