@@ -112,10 +112,10 @@ fn get_kernel_image_region() -> (usize, usize) {
 /// with the error we do do not bother to have an error type
 /// This is specifically the 'early' boot as it happens before
 /// we switch to the final kernel address space
-fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, Option<PlatInterfaceType>> {
+fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
     /* check that we are multi-booted */
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
-        return Err(None);
+        return Err(());
     }
     /* construct a reference to the mbi to get the command line */
     let mut mbi = MbiWrapper{mbi: None, callback: &|p, s| unsafe {
@@ -130,7 +130,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
         mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
             Some(mbi) => Some(mbi),
             None => {
-                    return Err(None);
+                    return Err(());
                 }
             };
     }
@@ -144,7 +144,7 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
     write!(plat, "Kernel imagine region {:x} {:x}\n", ki_start, ki_end).unwrap();
     if !init.high_window.range_valid(ki_start, ki_end - ki_start) {
         write!(plat, "Kernel image outside boot window!").unwrap();
-        return Err(Some(plat));
+        return Err(());
     }
     /* Initialize the panic function so we can see anything
      * really bad that happens */
@@ -186,12 +186,7 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) -> ! {
             mbi: mbi,
         };
         boot = match try_early_boot_system(boot_state) {
-            Err(Some(mut plat)) => {
-                    write!(plat, "Failed early init. hlt'ing\n").unwrap();
-                    halt();
-                },
-            Err(None) =>
-                halt(),
+            Err(_) => halt(),
             Ok(b) => b,
         };
         /* The 'plat' definition got moved into boot. Reset the panic location */
