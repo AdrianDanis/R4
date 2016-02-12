@@ -112,32 +112,35 @@ fn get_kernel_image_region() -> (usize, usize) {
 /// with the error we do do not bother to have an error type
 /// This is specifically the 'early' boot as it happens before
 /// we switch to the final kernel address space
-fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
+///
+/// # Safety
+///
+/// Should only be called once during bootup with the correct
+/// initial state
+unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
     /* check that we are multi-booted */
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
         return Err(());
     }
     /* construct a reference to the mbi to get the command line */
-    let mut mbi = MbiWrapper{mbi: None, callback: &|p, s| unsafe {
+    let mut mbi = MbiWrapper{mbi: None, callback: &|p, s|
         Some(init.low_window.make_slice(p as usize, s))
-        }};
-    unsafe {
-        /* Thanks to the stupidy in this function interface of requiring
-         * an unsafe function we cannot pass a lambda expression. Since
-         * a lambda cannot be made unsafe and we have no other way of
-         * passing our state we just transmute the lambda. Unfortunately
-         * this removes all type checking on our function :( */
-        mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
-            Some(mbi) => Some(mbi),
-            None => {
-                    return Err(());
-                }
-            };
-    }
+        };
+    /* Thanks to the stupidy in this function interface of requiring
+     * an unsafe function we cannot pass a lambda expression. Since
+     * a lambda cannot be made unsafe and we have no other way of
+     * passing our state we just transmute the lambda. Unfortunately
+     * this removes all type checking on our function :( */
+    mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
+        Some(mbi) => Some(mbi),
+        None => {
+                return Err(());
+            }
+        };
     let bootconfig = make_bootconfig(&mbi);
     /* Initial the serial output of our platform first so that
      * we can get debugging output. */
-    let mut plat = unsafe {get_platform(&bootconfig)};
+    let mut plat = get_platform(&bootconfig);
     plat.init_serial();
     write!(plat, "R4: In early setup\n").unwrap();
     let (ki_start, ki_end) = get_kernel_image_region();
@@ -154,8 +157,25 @@ fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEar
         display_multiboot(&mut plat, &mbi);
     }
     /* Perform early platform specific system initialization */
-    try!(unsafe{plat.early_init()});
+    try!(plat.early_init());
+    /* Do any platform device discovery */
+    /* Construct kernel window */
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
+}
+
+/// Perform the rest of the system boot in the final kernel Window.
+///
+/// # Safety
+///
+/// Should only be called oncce during bootup. Assumes that the kernel
+/// address space has been loaded and is currently active
+unsafe fn try_boot_system() {
+    /* Initialize CPU */
+    /* Initialize other system state? */
+    /* Perform any post cpu platform init */
+    /* Load initial user thread. Part of this will have to be
+     * moved earlier as the data for this is in the early boot
+     * window :(. Worry about this later */
 }
 
 /// Rust entry point for the kernel. This expects two parameters, one the
@@ -187,12 +207,15 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) -> ! {
             mbi_magic: magic,
             mbi: mbi,
         };
-        boot = match try_early_boot_system(boot_state) {
+        boot = match unsafe{try_early_boot_system(boot_state)} {
             Err(_) => halt(),
             Ok(b) => b,
         };
-        /* The 'plat' definition got moved into boot. Reset the panic location */
-        panic_set_plat(&mut boot.plat);
     }
+    /* The 'plat' definition got moved into boot. Reset the panic location */
+    panic_set_plat(&mut boot.plat);
+    /* Switch to kernel address space for this cluster */
+    /* Now we can perform the rest of the system boot */
+    unsafe{try_boot_system();}
     unimplemented!()
 }
