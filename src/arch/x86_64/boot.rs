@@ -156,10 +156,13 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     if let &Some(ref mbi) = &mbi.mbi {
         display_multiboot(&mut plat, &mbi);
     }
+    /* Construct early kernel allocator for memory stealing */
     /* Perform early platform specific system initialization */
     try!(plat.early_init());
     /* Do any platform device discovery */
+//    try!(plat.early_device_discovery());
     /* Construct kernel window */
+    
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 

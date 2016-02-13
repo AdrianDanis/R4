@@ -10,6 +10,7 @@
 #![feature(lang_items)]
 #![feature(asm)]
 #![feature(unique)]
+#![feature(placement_new_protocol)]
 #![no_std]
 
 pub mod arch;
@@ -18,6 +19,7 @@ mod config;
 mod vspace;
 mod util;
 mod panic;
+mod steal_mem;
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
 

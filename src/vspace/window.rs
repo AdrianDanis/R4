@@ -15,6 +15,10 @@ use core::slice;
 
 /// Describes a single window into the virtual address space in the form
 /// of a base:limit
+/// The allocation of objects is not done with in place allocation syntax
+/// as you may want the contents of the objects that are already here.
+/// Use the `early_mem` allocator if you want to construct initialized
+/// objects
 ///
 /// # Safety
 ///
