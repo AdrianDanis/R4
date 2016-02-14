@@ -15,7 +15,8 @@ const LOW_BOOT_MAPPING: (usize, usize) = (0x0 + 1, util::GB * 4 - 1);
 
 /// Early high window is a slice of the final kernel window. It covers a
 /// single gigabyte, which is meant to be enough to allow the kernel code
-/// to be executed at it's final address
+/// to be executed at it's final address. This region is also mapped
+/// to the same (first 1gb) of the low boot window
 const HIGH_BOOT_MAPPING: (usize, usize) = (0xffffffff80000000, util::GB);
 
 /// Final kernel window is the top 2^39 bits of memory
@@ -39,6 +40,12 @@ unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
     unsafe fn default() -> BootHighWindow<'a> {
         BootHighWindow(PhantomData)
     }
+    unsafe fn to_paddr(&self, addr: usize) -> usize {
+        addr - HIGH_BOOT_MAPPING.0
+    }
+    unsafe fn from_paddr(&self, paddr: usize) -> usize {
+        paddr + HIGH_BOOT_MAPPING.0
+    }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
@@ -47,6 +54,12 @@ unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
     unsafe fn default() -> KernelWindow<'a> {
         KernelWindow(PhantomData)
     }
+    unsafe fn to_paddr(&self, addr: usize) -> usize {
+        unimplemented!()
+    }
+    unsafe fn from_paddr(&self, paddr: usize) -> usize {
+        unimplemented!()
+    }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
@@ -54,5 +67,11 @@ unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
     fn size(&self) -> usize { LOW_BOOT_MAPPING.1 }
     unsafe fn default() -> BootLowWindow<'a> {
         BootLowWindow(PhantomData)
+    }
+    unsafe fn to_paddr(&self, addr: usize) -> usize {
+        addr
+    }
+    unsafe fn from_paddr(&self, paddr: usize) -> usize {
+        paddr
     }
 }

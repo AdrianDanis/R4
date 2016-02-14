@@ -2,5 +2,10 @@
 
 /// Round a value up by the given alignment
 pub fn round_up(val: usize, align: usize) -> usize {
-    val + (align - (val % align))
+    let diff = val % align;
+    if diff == 0 {
+        val
+    } else {
+        val + (align - diff)
+    }
 }

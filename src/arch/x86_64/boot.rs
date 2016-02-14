@@ -18,6 +18,7 @@ use ::config::BootConfig;
 use ::core::fmt::Write;
 use ::core::marker::PhantomData;
 use ::core::default::Default;
+use ::core::cmp;
 use super::halt::halt;
 use super::vspace::*;
 extern crate multiboot;
@@ -90,6 +91,37 @@ fn get_kernel_image_region() -> (usize, usize) {
     (&kernel_image_start as *const u8 as usize, &kernel_image_end as *const u8 as usize)
 }
 
+/// Small wrapper around the boot info memory map iterator to only return
+/// usable RAM regions
+struct BIMemIterator<'a, F> where F: Fn(u64, usize) -> Option<&'a [u8]> + 'a {
+    /// Iterator over the raw multiboot memory regions
+    iter: multiboot::MemoryMapIter<'a, F>,
+    /// Physical memory above which we actually consider usable. This allows
+    /// for a coarse grained way of skipping the memory that is currently
+    /// used by the kernel image
+    start: usize,
+}
+
+impl<'a, F: Fn(u64, usize) -> Option<&'a [u8]>> Iterator for BIMemIterator<'a, F> {
+    type Item=(usize, usize);
+    fn next(&mut self) -> Option<Self::Item> {
+        let mem = match self.iter.next() {
+            None => return None,
+            Some(m) => m,
+        };
+        if mem.memory_type() == multiboot::MemoryType::RAM {
+            let base = mem.base_address() as usize;
+            let len = mem.length() as usize;
+            let end = base + len;
+            if end > self.start {
+                let ret = (cmp::max(base, self.start), end);
+                return Some(ret);
+            }
+        }
+        self.next()
+    }
+}
+
 /// Try and boot the system, potentially returning an error.
 /// Since if we fail there is no way to display or do anything
 /// with the error we do do not bother to have an error type
@@ -130,8 +162,22 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     panic_set_plat(&mut plat);
     /* Now we can continue with the rest of init */
     display_multiboot(&mut plat, &mbi);
-    /* Construct early kernel allocator for memory stealing */
-//    let early_alloc = StealMem::new(|| 
+    /* Construct early kernel allocator for memory stealing. For simplicity
+     * we just ignore any memory that occurs before the end of the kernel
+     * image. */
+    let regions = match mbi.memory_regions() {
+        None => {
+            write!(plat, "No memory regions found in multiboot\n").unwrap();
+            return Err(());
+            }
+        Some(reg) => reg,
+    };
+    let mut early_alloc = StealMem::new(
+        BIMemIterator{
+            iter: regions,
+            start: init.high_window.to_paddr(ki_end),
+        },
+        init.high_window);
     /* Perform early platform specific system initialization */
     try!(plat.early_init());
     /* Do any platform device discovery */

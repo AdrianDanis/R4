@@ -18,6 +18,7 @@ use ::util;
 /// This does not implement drop as we do not support freeing these.
 /// Has a reference to phantom data to ensure this allocation does not
 /// live too long
+#[allow(dead_code)]
 pub struct StealBox<'a, T> {
     ptr: *const T,
     lifetime: &'a PhantomData<usize>,
@@ -82,9 +83,9 @@ pub struct StealMem<'a, 'w, I, W>
 impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
         where I: Iterator<Item=(usize, usize)>, W:VSpaceWindow<'a> {
     /// Construct a new allocator. Expects to be passed an iterator that will
-    /// yield (start, end) pairs. The return results should be ordered such
-    /// that early pairs are (hopefully) valid in the supplied window such
-    /// that any early allocations can succeed
+    /// yield (start, end) pairs of physical address. The return results
+    /// should be ordered such that early pairs are (hopefully) valid in the
+    /// supplied window such that any early allocations can succeed
     ///
     /// # Safety
     ///
@@ -105,7 +106,7 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
          * allocated that panics if anything goes wrong (in a kernel that
          * panics if anything goes wrong) then it's fine to just alloc
          * directly. */
-        let base = self.alloc_raw(size_of::<T>(), align);
+        let base = self.window.from_paddr(self.alloc_raw(size_of::<T>(), align));
         /* grab the raw range from the window */
         let slice: &'a [u8] = self.window.make_slice(base, size_of::<T>());
         /* pull out the pointer and forget about the slice */

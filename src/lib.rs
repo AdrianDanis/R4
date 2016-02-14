@@ -11,6 +11,8 @@
 #![feature(asm)]
 #![feature(unique)]
 #![feature(placement_new_protocol)]
+#![feature(placement_in_syntax)]
+#![feature(type_ascription)]
 #![no_std]
 
 pub mod arch;

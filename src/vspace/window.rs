@@ -122,4 +122,17 @@ pub unsafe trait VSpaceWindow<'a> {
     /// Invalid windows can be constructed, but must not be used until
     /// they become valid
     unsafe fn default() -> Self;
+    /// Translate a physical address to be within the range of the window
+    ///
+    /// # Safety
+    ///
+    /// Should only be called with a value that will end up within the range
+    /// of this window
+    unsafe fn from_paddr(&self, addr: usize) -> usize;
+    /// Translate an address from this window into a physical address.
+    ///
+    /// # Safety
+    ///
+    /// Should only be called on a value that is within this window
+    unsafe fn to_paddr(&self, paddr: usize) -> usize;
 }
