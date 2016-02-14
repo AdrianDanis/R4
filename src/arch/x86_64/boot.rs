@@ -56,7 +56,7 @@ struct PostEarlyBootState<'a> {
 }
 
 /// Debug function to print out the contents of the multiboot information
-fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multiboot<'a>) {
+fn display_multiboot<'a, F: Fn(u64, usize) -> Option<&'a [u8]>>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multiboot<'a, F>) {
     write!(plat, "Multiboot information:\n").unwrap();
     if let Some(low) = mbi.lower_memory_bound() {
         write!(plat,"\t{}kb of low memory\n", low).unwrap();
@@ -84,24 +84,6 @@ fn display_multiboot<'a>(plat: &mut PlatInterfaceType, mbi: &'a multiboot::Multi
     }
 }
 
-/// We create a wrapper struct because I don't know how else
-/// to get the lifetime of the return value of callback function
-/// to line up with the multiboot lifetime
-struct MbiWrapper<'a> {
-    mbi: Option<multiboot::Multiboot<'a>>,
-    callback: &'a Fn(u64, usize) -> Option<&'a [u8]>,
-}
-
-fn make_bootconfig<'a>(mbi: &MbiWrapper<'a>) -> BootConfig<'a> {
-    let mut cmdline = "";
-    if let &Some(ref mbi) = &mbi.mbi {
-        if let Some(cmd) = mbi.command_line() {
-            cmdline = cmd;
-        }
-    }
-    return BootConfig::new(cmdline);
-}
-
 /// Convert the kernel image start and end variables from the linker script
 /// into useful values
 fn get_kernel_image_region() -> (usize, usize) {
@@ -123,17 +105,15 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
         return Err(());
     }
-    /* construct a reference to the mbi to get the command line */
-    let mut mbi = MbiWrapper{mbi: None, callback: &|p, s|
-        Some(init.low_window.make_slice(p as usize, s))
-        };
-    mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
-        Some(mbi) => Some(mbi),
+    /* construct a reference to the mbi to get all of our boot information */
+    let mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr,  |p, s|
+            Some(init.low_window.make_slice(p as usize, s))) {
+        Some(mbi) => mbi,
         None => {
                 return Err(());
             }
         };
-    let bootconfig = make_bootconfig(&mbi);
+    let bootconfig = BootConfig::new(mbi.command_line().unwrap_or(""));
     /* Initial the serial output of our platform first so that
      * we can get debugging output. */
     let mut plat = get_platform(&bootconfig);
@@ -149,9 +129,7 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
      * really bad that happens */
     panic_set_plat(&mut plat);
     /* Now we can continue with the rest of init */
-    if let &Some(ref mbi) = &mbi.mbi {
-        display_multiboot(&mut plat, &mbi);
-    }
+    display_multiboot(&mut plat, &mbi);
     /* Construct early kernel allocator for memory stealing */
 //    let early_alloc = StealMem::new(|| 
     /* Perform early platform specific system initialization */

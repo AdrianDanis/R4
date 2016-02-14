@@ -9,7 +9,7 @@ dependencies = [
 [[package]]
 name = "multiboot"
 version = "0.2.0"
-source = "git+https://github.com/AdrianDanis/rust-multiboot#368654de3e3b69e41b720ab9eafac320e5a506d4"
+source = "git+https://github.com/AdrianDanis/rust-multiboot#5198878106060c96f9bf9dedae29c77a85af9b22"
 
 [[package]]
 name = "rlibc"
