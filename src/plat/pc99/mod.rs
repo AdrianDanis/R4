@@ -1,8 +1,8 @@
 //! PC99 platform definition
 mod pic;
-use ::plat::{PlatInterface};
-use ::config::{BootConfig};
-use ::arch::x86_64::ioport::*;
+use plat::{PlatInterface};
+use config::{BootConfig};
+use arch::x86_64::x86::io::*;
 
 /// Declare the concrete platform type for re-exporting by the parent `plat`
 /// module
@@ -20,7 +20,7 @@ pub struct PC99Interface {
 
 /// Helper function that waits for space on the FIFO of a standard uart
 unsafe fn serial_wait_ready(port: u16) {
-    while (ioport_in8(port + 5) & 0x60) == 0 {}
+    while (inb(port + 5) & 0x60) == 0 {}
 }
 
 /// Implementation of the generic platform interface for pc99
@@ -35,21 +35,21 @@ impl PlatInterface for PC99Interface {
             unsafe {
                 serial_wait_ready(port);
                 // disable interrupts
-                ioport_out8(port + 1, 0);
+                outb(port + 1, 0);
                 // set divisor to 0x1:0x00 = 115200
-                ioport_out8(port + 3, 0x80);
-                ioport_out8(port, 0x01);
-                ioport_out8(port + 1, 0x00);
+                outb(port + 3, 0x80);
+                outb(port, 0x01);
+                outb(port + 1, 0x00);
                 // 8 bit no parity 1 stop
-                ioport_out8(port + 3, 0x03);
+                outb(port + 3, 0x03);
                 // set DTR/RTS/OUT2
-                ioport_out8(port + 4, 0x0b);
+                outb(port + 4, 0x0b);
                 // clear receive
-                ioport_in8(port);
+                inb(port);
                 // clear line status
-                ioport_in8(port + 5);
+                inb(port + 5);
                 // clear modem status
-                ioport_in8(port + 6);
+                inb(port + 6);
             }
             self.debug_port = Some((true, port));
         }
@@ -59,7 +59,7 @@ impl PlatInterface for PC99Interface {
             if have_serial {
                 unsafe {
                     serial_wait_ready(port);
-                    ioport_out8(port, c);
+                    outb(port, c);
                     if c == b'\n' {
                         self.putchar(b'\r')
                     }

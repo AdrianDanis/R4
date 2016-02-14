@@ -14,3 +14,4 @@ crate-type = ["staticlib"]
 rlibc = "1.0.0"
 #multiboot = "0.2.0"
 multiboot = {git = "https://github.com/AdrianDanis/rust-multiboot"}
+x86 = "0.6.0"

@@ -4,7 +4,7 @@
 //! abstractions or type systems. Given that our extent of the interraction
 //! with the PIC is to turn it off it doesn't seem worth creating anything
 //! especially nice here
-use ::arch::x86_64::ioport::*;
+use ::arch::x86_64::x86::io::*;
 
 /// Base address of master PIC
 const MASTER: u16 = 0x20;
@@ -20,12 +20,12 @@ const REMAP_OFFSET: u8 = 32;
 
 /// Write to the PIC command register
 unsafe fn command(pic: u16, cmd: u8) {
-    ioport_out8(pic + COMMAND_OFFSET, cmd);
+    outb(pic + COMMAND_OFFSET, cmd);
 }
 
 /// Write to the PIC data register
 unsafe fn data(pic: u16, data: u8) {
-    ioport_out8(pic + DATA_OFFSET, data);
+    outb(pic + DATA_OFFSET, data);
 }
 
 /// Remap the PIC interrupts to a given base
