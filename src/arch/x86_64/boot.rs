@@ -14,6 +14,7 @@ use plat::*;
 use vspace::*;
 use panic::*;
 use steal_mem::*;
+use types::*;
 use ::config::BootConfig;
 use ::core::fmt::Write;
 use ::core::marker::PhantomData;
@@ -99,11 +100,11 @@ struct BIMemIterator<'a, F> where F: Fn(u64, usize) -> Option<&'a [u8]> + 'a {
     /// Physical memory above which we actually consider usable. This allows
     /// for a coarse grained way of skipping the memory that is currently
     /// used by the kernel image
-    start: usize,
+    start: PAddr,
 }
 
 impl<'a, F: Fn(u64, usize) -> Option<&'a [u8]>> Iterator for BIMemIterator<'a, F> {
-    type Item=(usize, usize);
+    type Item=(PAddr, PAddr);
     fn next(&mut self) -> Option<Self::Item> {
         let mem = match self.iter.next() {
             None => return None,
@@ -112,9 +113,9 @@ impl<'a, F: Fn(u64, usize) -> Option<&'a [u8]>> Iterator for BIMemIterator<'a, F
         if mem.memory_type() == multiboot::MemoryType::RAM {
             let base = mem.base_address() as usize;
             let len = mem.length() as usize;
-            let end = base + len;
+            let end = PAddr(base + len);
             if end > self.start {
-                let ret = (cmp::max(base, self.start), end);
+                let ret = (cmp::max(PAddr(base), self.start), end);
                 return Some(ret);
             }
         }
@@ -139,7 +140,7 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     }
     /* construct a reference to the mbi to get all of our boot information */
     let mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr,  |p, s|
-            Some(init.low_window.make_slice(p as usize, s))) {
+            Some(init.low_window.make_slice(init.low_window.to_addr(p as usize), s))) {
         Some(mbi) => mbi,
         None => {
                 return Err(());
@@ -175,7 +176,7 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     let mut early_alloc = StealMem::new(
         BIMemIterator{
             iter: regions,
-            start: init.high_window.to_paddr(ki_end),
+            start: init.high_window.to_paddr(init.high_window.to_addr(ki_end)),
         },
         init.high_window);
     /* Perform early platform specific system initialization */

@@ -8,10 +8,13 @@
 //! the corrspending objects have a type that forces them to be used in
 //! a context where there is an appropriate fault handler setup to catch
 //! invalid accesses
-use core::intrinsics::transmute;
-use core::num::Wrapping;
-use core::mem::size_of;
-use core::slice;
+use ::core::intrinsics::transmute;
+use ::core::num::Wrapping;
+use ::core::mem::size_of;
+use ::core::slice;
+use ::core::fmt::Debug;
+use ::core::ops::Deref;
+use types::*;
 
 /// Describes a single window into the virtual address space in the form
 /// of a base:limit
@@ -28,7 +31,9 @@ use core::slice;
 ///
 /// There is no restriction on creating multiple duplicate overlapping
 /// windows, provided the restrictions on lifetimes is preserved
-pub unsafe trait VSpaceWindow<'a> {
+pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref<Target=usize>{
+    /// An address whose type says it is valid in this window
+    type Addr;
     /// Get the base address of the window
     fn base(&self) -> usize;
     /// Get the limit of the window
@@ -59,11 +64,11 @@ pub unsafe trait VSpaceWindow<'a> {
     /// addresses are valid, it is the requirement of the caller of this
     /// function to ensure something real exists at the physical address
     /// of this mapping.
-    unsafe fn make<T: Sized>(&self, b: usize) -> &'a T {
-        if !self.range_valid(b, size_of::<T>()) {
-            panic!("Cannot make object at {}", b);
+    unsafe fn make<T: Sized>(&self, b: Self::Addr) -> &'a T {
+        if !self.addr_range_valid(b, size_of::<T>()) {
+            panic!("Cannot make object at {:?}", b);
         }
-        return transmute(b);
+        return transmute(*b);
     }
     /// This function is very similar to `make` except that it constructs
     /// a slice containing potentially multiple objects of type `T`.
@@ -76,11 +81,11 @@ pub unsafe trait VSpaceWindow<'a> {
     /// # Safety
     ///
     /// See `make`
-    unsafe fn make_slice<T: Sized>(&self, b:usize, num: usize) -> &'a [T] {
-        if !self.range_valid(b, size_of::<T>() * num) {
-            panic!("Cannot make array with {} elements at {}", num, b);
+    unsafe fn make_slice<T: Sized>(&self, b: Self::Addr, num: usize) -> &'a [T] {
+        if !self.addr_range_valid(b, size_of::<T>() * num) {
+            panic!("Cannot make array with {} elements at {:?}", num, b);
         }
-        return slice::from_raw_parts(transmute(b), num);
+        return slice::from_raw_parts(transmute(*b), num);
     }
     /// Creates a new window that is a subwindow of this one. The way of
     /// of describing the new window is to pass in an already constructed
@@ -114,6 +119,10 @@ pub unsafe trait VSpaceWindow<'a> {
          * and the comparison will fail */
         b >= self.base() && b <= (Wrapping(self.base()) + Wrapping(self.size()) - Wrapping(s)).0
     }
+    /// Tests if a range of bytes would be valid in this window
+    fn addr_range_valid(&self, b: Self::Addr, s:usize) -> bool {
+        self.range_valid(*b, s)
+    }
     /// Return the default construction of a window
     ///
     /// # Safety
@@ -128,11 +137,17 @@ pub unsafe trait VSpaceWindow<'a> {
     ///
     /// Should only be called with a value that will end up within the range
     /// of this window
-    unsafe fn from_paddr(&self, addr: usize) -> usize;
+    unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr;
     /// Translate an address from this window into a physical address.
     ///
     /// # Safety
     ///
     /// Should only be called on a value that is within this window
-    unsafe fn to_paddr(&self, paddr: usize) -> usize;
+    unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr;
+    /// Convert some virtual address into a an address for this window
+    ///
+    /// # Safety
+    ///
+    /// Address should be from this window
+    unsafe fn to_addr(&self, addr: usize) -> Self::Addr;
 }

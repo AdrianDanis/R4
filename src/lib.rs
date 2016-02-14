@@ -22,6 +22,7 @@ mod vspace;
 mod util;
 mod panic;
 mod steal_mem;
+mod types;
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
 

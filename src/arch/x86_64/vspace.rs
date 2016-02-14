@@ -2,7 +2,10 @@
 
 use util;
 use ::core::marker::PhantomData;
+use ::core::fmt::Debug;
+use ::core::ops::Deref;
 use vspace::VSpaceWindow;
+use types::*;
 
 /// The low boot window is a 1-1 mapped 4GB window of the bottom of memory
 /// This window is used both as where the boot code initially runs before
@@ -34,44 +37,89 @@ pub struct BootHighWindow<'a>(PhantomData<&'a usize>);
 /// remains valid forever after
 pub struct KernelWindow<'a>(PhantomData<&'a usize>);
 
+/// Wrapper for an address in a high window
+#[derive(Ord, Eq, PartialEq, PartialOrd, Debug, Copy, Clone)]
+pub struct HighWindowAddr(usize);
+
+/// Wrapper for an address in the kernel window
+#[derive(Ord, Eq, PartialEq, PartialOrd, Debug, Copy, Clone)]
+pub struct KernelWindowAddr(usize);
+
+/// Wrapper for an address in the boot window
+#[derive(Ord, Eq, PartialEq, PartialOrd, Debug, Copy, Clone)]
+pub struct LowWindowAddr(usize);
+
+impl Deref for HighWindowAddr{
+    type Target = usize;
+    fn deref(&self) -> &usize {
+        &self.0
+    }
+}
+
+impl Deref for LowWindowAddr{
+    type Target = usize;
+    fn deref(&self) -> &usize {
+        &self.0
+    }
+}
+
+impl Deref for KernelWindowAddr{
+    type Target = usize;
+    fn deref(&self) -> &usize {
+        &self.0
+    }
+}
+
 unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
+    type Addr = HighWindowAddr;
     fn base(&self) -> usize { HIGH_BOOT_MAPPING.0 }
     fn size(&self) -> usize { HIGH_BOOT_MAPPING.1 }
     unsafe fn default() -> BootHighWindow<'a> {
         BootHighWindow(PhantomData)
     }
-    unsafe fn to_paddr(&self, addr: usize) -> usize {
-        addr - HIGH_BOOT_MAPPING.0
+    unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
+        PAddr(addr.0 - HIGH_BOOT_MAPPING.0)
     }
-    unsafe fn from_paddr(&self, paddr: usize) -> usize {
-        paddr + HIGH_BOOT_MAPPING.0
+    unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr {
+        HighWindowAddr(paddr.0 + HIGH_BOOT_MAPPING.0)
+    }
+    unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
+        HighWindowAddr(addr)
     }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
+    type Addr = KernelWindowAddr;
     fn base(&self) -> usize { KERNEL_MAPPING.0 }
     fn size(&self) -> usize { KERNEL_MAPPING.1 }
     unsafe fn default() -> KernelWindow<'a> {
         KernelWindow(PhantomData)
     }
-    unsafe fn to_paddr(&self, addr: usize) -> usize {
+    unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
         unimplemented!()
     }
-    unsafe fn from_paddr(&self, paddr: usize) -> usize {
+    unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr {
         unimplemented!()
+    }
+    unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
+        KernelWindowAddr(addr)
     }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
+    type Addr = LowWindowAddr;
     fn base(&self) -> usize { LOW_BOOT_MAPPING.0 }
     fn size(&self) -> usize { LOW_BOOT_MAPPING.1 }
     unsafe fn default() -> BootLowWindow<'a> {
         BootLowWindow(PhantomData)
     }
-    unsafe fn to_paddr(&self, addr: usize) -> usize {
-        addr
+    unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
+        PAddr(addr.0)
     }
-    unsafe fn from_paddr(&self, paddr: usize) -> usize {
-        paddr
+    unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr {
+        LowWindowAddr(paddr.0)
+    }
+    unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
+        LowWindowAddr(addr)
     }
 }

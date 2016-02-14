@@ -13,6 +13,7 @@ use ::core::marker::PhantomData;
 use ::core::ops;
 use ::core::mem::{size_of, forget, transmute};
 use ::util;
+use types::*;
 
 /// Custom box for our returned alloccations
 /// This does not implement drop as we do not support freeing these.
@@ -73,15 +74,15 @@ impl<'a, T> ops::Place<T> for StealBoxPlace<'a, T> {
 /// let obj = steal_mem_impl <- Obj::default()
 /// ```
 pub struct StealMem<'a, 'w, I, W>
-        where I: Iterator<Item=(usize,usize)>, W: VSpaceWindow<'a> + 'w {
+        where I: Iterator<Item=(PAddr, PAddr)>, W: VSpaceWindow<'a> + 'w {
     iter: I,
-    range: (usize, usize),
+    range: (PAddr, PAddr),
     window: &'w W,
     phantom: PhantomData<&'a usize>,
 }
 
 impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
-        where I: Iterator<Item=(usize, usize)>, W:VSpaceWindow<'a> {
+        where I: Iterator<Item=(PAddr, PAddr)>, W:VSpaceWindow<'a> {
     /// Construct a new allocator. Expects to be passed an iterator that will
     /// yield (start, end) pairs of physical address. The return results
     /// should be ordered such that early pairs are (hopefully) valid in the
@@ -92,7 +93,7 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
     /// Enough of the early iterations must be valid in the supplied window
     /// for all in place allocations to succeed
     pub unsafe fn new(i: I, w: &'w W) -> StealMem<'a, 'w, I, W> {
-        StealMem {iter: i, window: w, phantom: PhantomData, range: (0, 0)}
+        StealMem {iter: i, window: w, phantom: PhantomData, range: (PAddr(0), PAddr(0))}
     }
     /// Return an in place allocator to construct a variable out of
     ///
@@ -118,12 +119,12 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
         StealBoxPlace { ptr: pointer as *mut T, lifetime: transmute(&PhantomData::<usize>) }
     }
     /// Internal function allocates a range with the given alignment
-    fn alloc_raw(&mut self, size: usize, align: usize) -> usize {
+    fn alloc_raw(&mut self, size: usize, align: usize) -> PAddr {
         /* round the current range up by the alignment */
-        let next_base = util::round_up(self.range.0, align);
+        let next_base = PAddr(util::round_up((self.range.0).0, align));
         /* see if this fits */
-        if next_base + size <= self.range.1 {
-            self.range.0 = next_base + size;
+        if next_base.0 + size <= (self.range.1).0 {
+            (self.range.0).0 = next_base.0 + size;
             return next_base;
         }
         /* look for another range */
