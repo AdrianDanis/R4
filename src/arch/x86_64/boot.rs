@@ -13,6 +13,7 @@
 use plat::*;
 use vspace::*;
 use panic::*;
+use steal_mem::*;
 use ::config::BootConfig;
 use ::core::fmt::Write;
 use ::core::marker::PhantomData;
@@ -126,11 +127,6 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     let mut mbi = MbiWrapper{mbi: None, callback: &|p, s|
         Some(init.low_window.make_slice(p as usize, s))
         };
-    /* Thanks to the stupidy in this function interface of requiring
-     * an unsafe function we cannot pass a lambda expression. Since
-     * a lambda cannot be made unsafe and we have no other way of
-     * passing our state we just transmute the lambda. Unfortunately
-     * this removes all type checking on our function :( */
     mbi.mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr, mbi.callback) {
         Some(mbi) => Some(mbi),
         None => {
@@ -157,6 +153,7 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
         display_multiboot(&mut plat, &mbi);
     }
     /* Construct early kernel allocator for memory stealing */
+//    let early_alloc = StealMem::new(|| 
     /* Perform early platform specific system initialization */
     try!(plat.early_init());
     /* Do any platform device discovery */
