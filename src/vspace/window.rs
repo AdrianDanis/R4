@@ -119,7 +119,9 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
          * and the comparison will fail */
         b >= self.base() && b <= (Wrapping(self.base()) + Wrapping(self.size()) - Wrapping(s)).0
     }
-    /// Tests if a range of bytes would be valid in this window
+    /// Tests if a range of bytes would be valid in this window. Takes
+    /// as input a base address that is typed to be in the window, so is
+    /// really testing if the size would put it out of the window
     fn addr_range_valid(&self, b: Self::Addr, s:usize) -> bool {
         self.range_valid(*b, s)
     }
