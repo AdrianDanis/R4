@@ -12,6 +12,7 @@ use ::vspace::VSpaceWindow;
 use ::core::marker::PhantomData;
 use ::core::ops;
 use ::core::mem::{size_of, forget, transmute};
+use ::util;
 
 /// Custom box for our returned alloccations
 /// This does not implement drop as we do not support freeing these.
@@ -93,15 +94,20 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
         StealMem {iter: i, window: w, phantom: PhantomData, range: (0, 0)}
     }
     /// Return an in place allocator to construct a variable out of
+    ///
+    /// # Safety
+    ///
+    /// Can only call alloc for as long as the original iterator returns
+    /// memory within the vspace window
     pub unsafe fn alloc<T>(&mut self, align: usize) -> StealBoxPlace<'a, T> {
         /* Technically we should reserve a range here, and then complete
          * the allocation in finalize. But since this is a single threaded
          * allocated that panics if anything goes wrong (in a kernel that
          * panics if anything goes wrong) then it's fine to just alloc
          * directly. */
-        let base = self.alloc_raw(size_of::<T>(), size_of::<T>());
+        let base = self.alloc_raw(size_of::<T>(), align);
         /* grab the raw range from the window */
-        let slice: &'a [u8] = self.window.make_slice(1, size_of::<T>());
+        let slice: &'a [u8] = self.window.make_slice(base, size_of::<T>());
         /* pull out the pointer and forget about the slice */
         let pointer = slice.as_ptr();
         forget(slice);
@@ -112,6 +118,18 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
     }
     /// Internal function allocates a range with the given alignment
     fn alloc_raw(&mut self, size: usize, align: usize) -> usize {
-        unimplemented!()
+        /* round the current range up by the alignment */
+        let next_base = util::round_up(self.range.0, align);
+        /* see if this fits */
+        if next_base + size <= self.range.1 {
+            self.range.0 = next_base + size;
+            return next_base;
+        }
+        /* look for another range */
+        match self.iter.next() {
+            Some(range) => self.range = range,
+            None => panic!("Out of memory allocated {} bytes with {} align", size, align),
+        }
+        self.alloc_raw(size, align)
     }
 }
