@@ -78,12 +78,14 @@ unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
         BootHighWindow(PhantomData)
     }
     unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
+        debug_assert!(self.addr_range_valid(addr, 0));
         PAddr(addr.0 - HIGH_BOOT_MAPPING.0)
     }
     unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr {
-        HighWindowAddr(paddr.0 + HIGH_BOOT_MAPPING.0)
+        self.to_addr(paddr.0 + HIGH_BOOT_MAPPING.0)
     }
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
+        debug_assert!(self.range_valid(addr, 0));
         HighWindowAddr(addr)
     }
 }
@@ -102,7 +104,7 @@ unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
         unimplemented!()
     }
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
-        KernelWindowAddr(addr)
+        unimplemented!()
     }
 }
 
@@ -114,12 +116,14 @@ unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
         BootLowWindow(PhantomData)
     }
     unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
+        debug_assert!(self.addr_range_valid(addr, 0));
         PAddr(addr.0)
     }
     unsafe fn from_paddr(&self, paddr: PAddr) -> Self::Addr {
-        LowWindowAddr(paddr.0)
+        self.to_addr(paddr.0)
     }
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
+        debug_assert!(self.range_valid(addr, 0));
         LowWindowAddr(addr)
     }
 }
