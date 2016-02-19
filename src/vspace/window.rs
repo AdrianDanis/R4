@@ -82,10 +82,21 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     ///
     /// See `make`
     unsafe fn make_slice<T: Sized>(&self, b: Self::Addr, num: usize) -> &'a [T] {
-        if !self.addr_range_valid(b, size_of::<T>() * num) {
-            panic!("Cannot make array with {} elements at {:?}", num, b);
+        match self.maybe_make_slice(b, num) {
+            None => panic!("Cannot make array with {} elements at {:?}", num, b),
+            Some(slice) => slice,
         }
-        return slice::from_raw_parts(transmute(*b), num);
+    }
+    /// Similar to `make_slice`, but can return `None`
+    ///
+    /// # Safety
+    ///
+    /// See `make`
+    unsafe fn maybe_make_slice<T: Sized>(&self, b: Self::Addr, num: usize) -> Option<&'a [T]> {
+        match self.addr_range_valid(b, size_of::<T>() * num) {
+            true => Some(slice::from_raw_parts(transmute(*b), num)),
+            false => None,
+        }
     }
     /// Creates a new window that is a subwindow of this one. The way of
     /// of describing the new window is to pass in an already constructed

@@ -142,7 +142,7 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     }
     /* construct a reference to the mbi to get all of our boot information */
     let mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr,  |p, s|
-            Some(init.low_window.make_slice(init.low_window.to_addr(p as usize), s))) {
+            unsafe{init.low_window.maybe_make_slice(init.low_window.to_addr(p as usize), s)}) {
         Some(mbi) => mbi,
         None => {
                 return Err(());
