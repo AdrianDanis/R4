@@ -13,6 +13,7 @@
 mod pc99;
 use self::pc99::plat_get_platform;
 use config::BootConfig;
+use vspace::VSpaceWindow;
 use ::core::fmt;
 
 /// Re-export the current platform type. Any kernel code that wants to use
@@ -43,6 +44,9 @@ pub trait PlatInterface {
     /// This function should only be called once, and only during the
     /// early bootup phase of the system
     unsafe fn early_init(&mut self) -> Result<(), ()>;
+    /// Perform device discovery. Takes a window that can provide access
+    /// to any hardware structures to walk
+    fn early_device_discovery<'a, W: VSpaceWindow<'a>>(&mut self, window: &'a W) -> Result<(), ()>;
 }
 
 impl fmt::Write for PlatInterfaceType {

@@ -180,9 +180,8 @@ unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<
     /* Perform early platform specific system initialization */
     try!(plat.early_init());
     /* Do any platform device discovery */
-//    try!(plat.early_device_discovery());
+    try!(plat.early_device_discovery(init.low_window));
     /* Construct kernel window */
-    
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 

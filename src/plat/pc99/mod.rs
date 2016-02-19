@@ -3,6 +3,7 @@ mod pic;
 use plat::{PlatInterface};
 use config::{BootConfig};
 use arch::x86_64::x86::io::*;
+use vspace::VSpaceWindow;
 
 /// Declare the concrete platform type for re-exporting by the parent `plat`
 /// module
@@ -71,6 +72,10 @@ impl PlatInterface for PC99Interface {
         /* Need to disable the legacy PIC */
         pic::disable();
         return Ok(());
+    }
+    fn early_device_discovery<'a, W: VSpaceWindow<'a>>(&mut self, window: &'a W) -> Result<(), ()>{
+        /* no device right now. Should probably return something eventually */
+        Ok(())
     }
 }
 
