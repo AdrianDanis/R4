@@ -74,3 +74,18 @@ is also a trusted (requires a special cap) operation.
 
 Some kind of story for properly doing interrupt priorities? i.e. not fucking
 it up / ignoring it like in seL4.
+
+
+
+TODO FIXME
+ASIDS do not work as identification for proxy caps because then there is
+no way to actually enforce isolation, as two threads can 'guess' each others
+ASIDs and always be able to communicate. They need to have some kind of
+official reference to the other thread, but how to spread this without
+'real' cap transfer on IPC?
+* Probably just have cap to PD that gives proxy rights in either direction
+
+Only need one kind of IPC. Have user allocated queue node. Asynchronous IPC
+is now putting a message in a node for delivery. Synchronous IPC is async +
+wait for node to be empty again.
+Not sure where that leaves something like call/reply?
