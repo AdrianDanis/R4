@@ -49,6 +49,7 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     /// expected to be able to re `make` this object in the future then
     /// your object should be of a simple type such that the `drop`
     /// implementation is a no-op
+    ///
     /// # Safety
     ///
     /// It is assumed that there is a valid initialized object of type `T`

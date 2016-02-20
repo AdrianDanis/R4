@@ -28,6 +28,17 @@ pub fn panic_set_plat(plat: &mut PlatInterfaceType) {
     }
 }
 
+/// Perform an emergency unsafe write using the panic platform reference
+pub unsafe fn panic_write(fmt: Arguments) {
+    unsafe {
+        if let &mut Some(ref mut ptr) = &mut PLAT_REF {
+            let plat: &mut PlatInterfaceType;
+            plat = &mut *ptr.get_mut();
+            write!(plat, "{}\n", fmt).unwrap();
+        }
+    }
+}
+
 /// Attempts to print out a panic message before halting the system
 /// If `PLAT_REF` was not set correctly then this will crash, but we're
 /// already crashing so we cannot feel too bad for at least trying

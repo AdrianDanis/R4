@@ -13,6 +13,7 @@
 #![feature(placement_new_protocol)]
 #![feature(placement_in_syntax)]
 #![feature(type_ascription)]
+#![feature(step_by)]
 #![no_std]
 
 pub mod arch;

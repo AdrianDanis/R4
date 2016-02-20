@@ -1,6 +1,8 @@
 //! PC99 platform definition
 mod pic;
+mod acpi;
 use plat::{PlatInterface};
+use ::core::fmt::Write;
 use config::{BootConfig};
 use arch::x86_64::x86::io::*;
 use vspace::VSpaceWindow;
@@ -73,8 +75,18 @@ impl PlatInterface for PC99Interface {
         pic::disable();
         return Ok(());
     }
-    fn early_device_discovery<'a, W: VSpaceWindow<'a>>(&mut self, window: &'a W) -> Result<(), ()>{
-        /* no device right now. Should probably return something eventually */
+    fn early_device_discovery<'a, W: VSpaceWindow<'a>>(&mut self, window: &'a W) -> Result<(), ()> {
+        /* initialize ACPI */
+        let acpi = match acpi::ACPI::new(window) {
+            Some(a) => a,
+            None => {
+                    write!(self, "Failed to find ACPI tables\n");
+                    return Err(())
+                },
+        };
+        for table in acpi.rsdt_iter() {
+            write!(self, "Table {:?}\n", table.signature);
+        }
         Ok(())
     }
 }
