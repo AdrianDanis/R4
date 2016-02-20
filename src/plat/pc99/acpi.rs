@@ -3,6 +3,7 @@ use vspace::VSpaceWindow;
 use ::core::slice;
 use ::core::num::Wrapping;
 use ::core::mem::size_of;
+use types::PAddr;
 
 #[repr(packed)]
 #[derive(Debug)]
@@ -39,7 +40,7 @@ pub struct ACPI<'a, T> where T: VSpaceWindow<'a> + 'a {
     /// Reference to the RSDT header
     rsdt_header: &'a ACPIHeader,
     /// Raw reference to the first RSDT table
-    rsdt_table: usize,
+    rsdt_table: PAddr,
 }
 
 pub struct RSDTIter<'a, T: VSpaceWindow<'a>> where T: 'a{
@@ -52,7 +53,8 @@ impl<'a, T:VSpaceWindow<'a>> Iterator for RSDTIter<'a, T> {
     fn next(&mut self) -> Option<&'a ACPIHeader> {
         self.iter.as_mut()
             .and_then(|i| i.next())
-            .and_then(|h| unsafe{self.window.make(self.window.to_addr(*h as usize))}
+            .and_then(|h| unsafe{self.window.make(
+                self.window.from_paddr(PAddr(*h as usize)))}
         )
     }
 }
@@ -73,7 +75,8 @@ fn checksum<T>(base: &T, len: usize) -> bool {
 /// Find the RSDP by walking the various BIOS regions
 fn find_rsdp<'a, T: VSpaceWindow<'a>>(window: &'a T) -> Option<&'a RSDP> {
     for addr in (0xE0_000..0x100_000).step_by(16) {
-        let candidate: &RSDP = match unsafe{window.make(window.to_addr(addr))} {
+        let candidate: &RSDP = match unsafe{window.make(
+                window.from_paddr(PAddr(addr)))} {
             Some(c) => c,
             None => return None,
         };
@@ -89,19 +92,19 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
         find_rsdp(window)
             .and_then(|rsdp|
                 unsafe{window.make(
-                    window.to_addr(rsdp.rsdt_address as usize)
+                    window.from_paddr(PAddr(rsdp.rsdt_address as usize))
                 )}
             )
             .map(|rsdt| ACPI { window: window,
                 rsdt_header: rsdt,
-                rsdt_table: rsdt as *const ACPIHeader as usize + size_of::<ACPIHeader>()
+                rsdt_table: PAddr(rsdt as *const ACPIHeader as usize + size_of::<ACPIHeader>())
             })
     }
     pub fn rsdt_iter(&self) -> RSDTIter<'a, T> {
         RSDTIter { window: self.window,
             iter: unsafe{
                     self.window.make_slice(
-                    self.window.to_addr(self.rsdt_table),
+                    self.window.from_paddr(self.rsdt_table),
                     (self.rsdt_header.length as usize - size_of::<ACPIHeader>()) / size_of::<u32>()
                 )}.map(|s| s.iter())
         }

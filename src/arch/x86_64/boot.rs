@@ -140,8 +140,10 @@ unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) ->
         return Err(());
     }
     /* construct a reference to the mbi to get all of our boot information */
-    let mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr,  |p, s|
-            init.low_window.make_slice(init.low_window.to_addr(p as usize), s)) {
+    let mbi = match multiboot::Multiboot::new(init.mbi as multiboot::PAddr,
+            |p, s| init.low_window.make_slice(
+                init.low_window.from_paddr(PAddr(p as usize)),
+                s)) {
         Some(mbi) => mbi,
         None => {
                 return Err(());
