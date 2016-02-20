@@ -71,7 +71,7 @@ impl<'a, T> ops::Place<T> for StealBoxPlace<'a, T> {
 ///
 /// ```
 /// let steal_mem_impl = ...;
-/// let obj = steal_mem_impl <- Obj::default()
+/// let obj = steal_mem_impl.alloc(align_of_obj).unwrap() <- Obj::default()
 /// ```
 pub struct StealMem<'a, 'w, I, W>
         where I: Iterator<Item=(PAddr, PAddr)>, W: VSpaceWindow<'a> + 'w {
@@ -101,37 +101,48 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
     ///
     /// Can only call alloc for as long as the original iterator returns
     /// memory within the vspace window
-    pub unsafe fn alloc<T>(&mut self, align: usize) -> StealBoxPlace<'a, T> {
+    pub unsafe fn alloc<T>(&mut self, align: usize)
+            -> Option<StealBoxPlace<'a, T>> {
         /* Technically we should reserve a range here, and then complete
          * the allocation in finalize. But since this is a single threaded
          * allocated that panics if anything goes wrong (in a kernel that
          * panics if anything goes wrong) then it's fine to just alloc
          * directly. */
-        let base = self.window.from_paddr(self.alloc_raw(size_of::<T>(), align));
+        let paddr = match self.alloc_raw(size_of::<T>(), align) {
+            Some(p) => p,
+            None => return None,
+        };
+        let base = self.window.from_paddr(paddr);
         /* grab the raw range from the window */
-        let slice: &'a [u8] = self.window.make_slice(base, size_of::<T>()).unwrap();
+        let slice: &'a [u8] = match self.window.make_slice(base, size_of::<T>()) {
+            Some(s) => s,
+            None => return None,
+        };
         /* pull out the pointer and forget about the slice */
         let pointer = slice.as_ptr();
         forget(slice);
         /* return the raw pointer to the start of the block, constructing
          * a fake lifetime that is equivalent to the original slice lifetime
          */
-        StealBoxPlace { ptr: pointer as *mut T, lifetime: transmute(&PhantomData::<usize>) }
+        Some(StealBoxPlace { ptr: pointer as *mut T, lifetime: transmute(&PhantomData::<usize>) })
     }
     /// Internal function allocates a range with the given alignment
-    fn alloc_raw(&mut self, size: usize, align: usize) -> PAddr {
+    fn alloc_raw(&mut self, size: usize, align: usize) -> Option<PAddr> {
         /* round the current range up by the alignment */
         let next_base = PAddr(util::round_up((self.range.0).0, align));
         /* see if this fits */
         if next_base.0 + size <= (self.range.1).0 {
             (self.range.0).0 = next_base.0 + size;
-            return next_base;
+            return Some(next_base);
         }
         /* look for another range */
         match self.iter.next() {
-            Some(range) => self.range = range,
-            None => panic!("Out of memory allocated {} bytes with {} align", size, align),
+            Some(range) =>
+                {
+                    self.range = range;
+                    self.alloc_raw(size, align)
+                },
+            None => None,
         }
-        self.alloc_raw(size, align)
     }
 }
