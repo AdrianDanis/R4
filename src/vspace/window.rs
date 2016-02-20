@@ -34,6 +34,8 @@ use types::*;
 pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref<Target=usize>{
     /// An address whose type says it is valid in this window
     type Addr;
+    /// Type of data passed to creation function
+    type InitData;
     /// Get the base address of the window
     fn base(&self) -> usize;
     /// Get the limit of the window
@@ -98,29 +100,23 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
             false => None,
         }
     }
-    /// Creates a new window that is a subwindow of this one. The way of
-    /// of describing the new window is to pass in an already constructed
-    /// window. This is a slightly strange API, but is the nicest one I could
-    /// think of, although it is the reason this function is marked as unsafe.
-    ///
-    /// # Panics
-    ///
-    /// This does not return an error, rather if the new window is outside
-    /// the range of this one a panic is raised
-    ///
-    /// # Safety
-    ///
-    /// Subwindows should only be created outside of this function to be
-    /// passed into this function
-    unsafe fn subwindow<'i, I, O: ?Sized>(&self, window: I) -> &'a O where O: VSpaceWindow<'a>, I: VSpaceWindow<'i> {
+    /// Attemp to create a new window of the `O` with the `InitData`
+    /// from `O`. Will return `None` if the created window would not
+    /// be from inside this one
+    fn subwindow<O>(&self, data: O::InitData) -> Option<O>
+            where O: VSpaceWindow<'a> {
+        /* construct the new window */
+        let window = unsafe{O::new(data)};
         /* Validate the range for this window */
         if !self.range_valid(window.base(), window.size()) {
-            panic!("Cannot construct window with range {} {}, from {} {}");
+            None
+        } else {
+            Some(window)
         }
-        /* transmate to extend the lifetime. This is safe as
-         * it is a zero sized object */
-        transmute(&O::default())
     }
+    /// This funcction 'forces' implementors to not forget to store
+    /// the reference to the parent that restricts the lifetime.
+    //fn lifetime_reference(&self) -> PhantomData<&'a usize>;
     /// Tests if a range of bytes would be valid in this window
     fn range_valid(&self, b: usize, s: usize) -> bool {
         /* We have moved the `- s` to the other side of the equation
@@ -136,14 +132,12 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     fn addr_range_valid(&self, b: Self::Addr, s:usize) -> bool {
         self.range_valid(*b, s)
     }
-    /// Return the default construction of a window
+    /// Construct a new window with any necessary initial data
     ///
     /// # Safety
     ///
-    /// Only windows that are actually valid should be constructed.
-    /// Invalid windows can be constructed, but must not be used until
-    /// they become valid
-    unsafe fn default() -> Self;
+    /// Window should only be created if it is valid
+    unsafe fn new(init: Self::InitData) -> Self;
     /// Translate a physical address to be within the range of the window
     ///
     /// # Safety

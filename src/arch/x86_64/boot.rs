@@ -33,14 +33,14 @@ extern {
 }
 
 /// Package of state that is passed to the early boot function
-struct EarlyBootState<'h, 'l> {
+struct EarlyBootState<'a, 'h, 'l> where 'h: 'a, 'l: 'a {
     /// Referenece to the high window. Objects created from here can
     /// persist forever, and as such references to them can be returned
     /// in `PostEarlyBootState`
-    high_window : &'h BootHighWindow<'h>,
+    high_window : &'a BootHighWindow<'h>,
     /// Reference to the low window. References to objects from here
     /// cannot be returned in `PostEarlyBootState`
-    low_window : &'l BootLowWindow<'l>,
+    low_window : &'a BootLowWindow<'l>,
     /// The value of EAX passed from the assembly entry. This is checked
     /// to ensure we were multiboot loaded
     mbi_magic: usize,
@@ -135,7 +135,7 @@ impl<'a, F: Fn(u64, usize) -> Option<&'a [u8]>> Iterator for BIMemIterator<'a, F
 ///
 /// Should only be called once during bootup with the correct
 /// initial state
-unsafe fn try_early_boot_system<'h, 'l>(init: EarlyBootState<'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
+unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
     /* check that we are multi-booted */
     if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
         return Err(());
@@ -212,17 +212,14 @@ pub extern fn boot_system(magic: usize, mbi: *const usize) -> ! {
      * from it as having the same lifetime. This allows any references
      * created from the boot high kernel window being able to live on
      * into the final kernel window */
-    let final_window = unsafe{KernelWindow::default()};
+    let final_window = unsafe{KernelWindow::new(())};
     /* this variable will hold our system state as returned by early boot */
     let mut boot;
     {
         /* Construct our system state for boot */
-        let boot_high_window;
-        unsafe {
-            boot_high_window = final_window.subwindow(BootHighWindow::default());
-        }
+        let boot_high_window = final_window.subwindow(()).unwrap();
         /* whilst doing early boot we can also access things in low memory */
-        let boot_low_window = unsafe {BootLowWindow::default()};
+        let boot_low_window = unsafe {BootLowWindow::new(())};
         let boot_state = EarlyBootState {
             high_window: &boot_high_window,
             low_window: &boot_low_window,

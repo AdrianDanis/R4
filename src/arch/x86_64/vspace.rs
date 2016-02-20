@@ -72,11 +72,9 @@ impl Deref for KernelWindowAddr{
 
 unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
     type Addr = HighWindowAddr;
+    type InitData = ();
     fn base(&self) -> usize { HIGH_BOOT_MAPPING.0 }
     fn size(&self) -> usize { HIGH_BOOT_MAPPING.1 }
-    unsafe fn default() -> BootHighWindow<'a> {
-        BootHighWindow(PhantomData)
-    }
     unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
         debug_assert!(self.addr_range_valid(addr, 0));
         PAddr(addr.0 - HIGH_BOOT_MAPPING.0)
@@ -88,15 +86,16 @@ unsafe impl<'a> VSpaceWindow<'a> for BootHighWindow<'a> {
         debug_assert!(self.range_valid(addr, 0));
         HighWindowAddr(addr)
     }
+    unsafe fn new(data: Self::InitData) -> Self {
+        BootHighWindow(PhantomData)
+    }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
     type Addr = KernelWindowAddr;
+    type InitData = ();
     fn base(&self) -> usize { KERNEL_MAPPING.0 }
     fn size(&self) -> usize { KERNEL_MAPPING.1 }
-    unsafe fn default() -> KernelWindow<'a> {
-        KernelWindow(PhantomData)
-    }
     unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
         unimplemented!()
     }
@@ -106,15 +105,16 @@ unsafe impl<'a> VSpaceWindow<'a> for KernelWindow<'a> {
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
         unimplemented!()
     }
+    unsafe fn new(data: Self::InitData) -> Self {
+        KernelWindow(PhantomData)
+    }
 }
 
 unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
     type Addr = LowWindowAddr;
+    type InitData = ();
     fn base(&self) -> usize { LOW_BOOT_MAPPING.0 }
     fn size(&self) -> usize { LOW_BOOT_MAPPING.1 }
-    unsafe fn default() -> BootLowWindow<'a> {
-        BootLowWindow(PhantomData)
-    }
     unsafe fn to_paddr(&self, addr: Self::Addr) -> PAddr {
         debug_assert!(self.addr_range_valid(addr, 0));
         PAddr(addr.0)
@@ -125,5 +125,8 @@ unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr {
         debug_assert!(self.range_valid(addr, 0));
         LowWindowAddr(addr)
+    }
+    unsafe fn new(data: Self::InitData) -> Self {
+        BootLowWindow(PhantomData)
     }
 }
