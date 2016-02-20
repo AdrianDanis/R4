@@ -2,7 +2,8 @@
 use vspace::VSpaceWindow;
 use ::core::slice;
 use ::core::num::Wrapping;
-use ::core::mem::size_of;
+use ::core::mem::{size_of, transmute};
+use ::core::iter::FilterMap;
 use types::PAddr;
 
 #[repr(packed)]
@@ -22,7 +23,7 @@ struct RSDP {
 #[repr(packed)]
 #[derive(Debug)]
 pub struct ACPIHeader {
-    pub signature: [u8; 4],
+    signature: [u8; 4],
     length: u32,
     revision: u8,
     checksum: u8,
@@ -31,6 +32,14 @@ pub struct ACPIHeader {
     oem_revision: u32,
     creater_id: [u8; 4],
     creater_reivision: u32,
+}
+
+#[repr(packed)]
+#[derive(Debug)]
+pub struct MADT {
+    header: ACPIHeader,
+    apic_addr: u32,
+    flags: u32,
 }
 
 /// ACPI walker state
@@ -48,14 +57,26 @@ pub struct RSDTIter<'a, T: VSpaceWindow<'a>> where T: 'a{
     iter: Option<slice::Iter<'a, u32>>,
 }
 
+#[derive(Debug)]
+pub enum RSDTTable<'a> {
+    MADT(&'a MADT),
+    Unknown(&'a ACPIHeader),
+}
+
 impl<'a, T:VSpaceWindow<'a>> Iterator for RSDTIter<'a, T> {
-    type Item = &'a ACPIHeader;
-    fn next(&mut self) -> Option<&'a ACPIHeader> {
+    type Item = RSDTTable<'a>;
+    fn next(&mut self) -> Option<RSDTTable<'a>> {
         self.iter.as_mut()
             .and_then(|i| i.next())
-            .and_then(|h| unsafe{self.window.make(
-                self.window.from_paddr(PAddr(*h as usize)))}
-        )
+            .and_then(|h| unsafe {
+                let addr = self.window.from_paddr(PAddr(*h as usize));
+                self.window.make::<ACPIHeader>(addr)
+            }).and_then(|h|
+                unsafe{Some(match &h.signature {
+                    b"APIC" => RSDTTable::MADT(transmute(h)),
+                    _ => RSDTTable::Unknown(h),
+                })}
+            )
     }
 }
 
@@ -87,6 +108,15 @@ fn find_rsdp<'a, T: VSpaceWindow<'a>>(window: &'a T) -> Option<&'a RSDP> {
     None
 }
 
+/// Due to current limitations this cannot be a closure
+fn extract_madt<'a>(header:RSDTTable<'a>) -> Option<&'a MADT> {
+    if let RSDTTable::MADT(madt) = header {
+        Some(madt)
+    } else {
+        None
+    }
+}
+
 impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
     pub fn new(window: &'a T) -> Option<ACPI<'a, T>> {
         find_rsdp(window)
@@ -108,5 +138,12 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
                     (self.rsdt_header.length as usize - size_of::<ACPIHeader>()) / size_of::<u32>()
                 )}.map(|s| s.iter())
         }
+    }
+    pub fn madt_iter<>(&self)
+            -> FilterMap<RSDTIter<'a, T>,
+                fn(RSDTTable<'a>) -> Option<&'a MADT>>
+            {
+        self.rsdt_iter()
+            .filter_map(extract_madt as fn(RSDTTable<'a>) -> Option<&'a MADT>)
     }
 }

@@ -84,8 +84,8 @@ impl PlatInterface for PC99Interface {
                     return Err(())
                 },
         };
-        for table in acpi.rsdt_iter() {
-            write!(self, "Table {:?}\n", table.signature);
+        for table in acpi.madt_iter() {
+            write!(self, "Table {:?}\n", table);
         }
         Ok(())
     }
