@@ -109,7 +109,7 @@ impl<'a, 'w, I, W> StealMem<'a, 'w, I, W>
          * directly. */
         let base = self.window.from_paddr(self.alloc_raw(size_of::<T>(), align));
         /* grab the raw range from the window */
-        let slice: &'a [u8] = self.window.make_slice(base, size_of::<T>());
+        let slice: &'a [u8] = self.window.make_slice(base, size_of::<T>()).unwrap();
         /* pull out the pointer and forget about the slice */
         let pointer = slice.as_ptr();
         forget(slice);

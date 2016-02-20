@@ -49,12 +49,6 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     /// expected to be able to re `make` this object in the future then
     /// your object should be of a simple type such that the `drop`
     /// implementation is a no-op
-    ///
-    /// # Panics
-    ///
-    /// This does not return an error, rather if the requested object would
-    /// fall even partially outside the window a panic is raised.
-    ///
     /// # Safety
     ///
     /// It is assumed that there is a valid initialized object of type `T`
@@ -66,35 +60,20 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     /// addresses are valid, it is the requirement of the caller of this
     /// function to ensure something real exists at the physical address
     /// of this mapping.
-    unsafe fn make<T: Sized>(&self, b: Self::Addr) -> &'a T {
-        if !self.addr_range_valid(b, size_of::<T>()) {
-            panic!("Cannot make object at {:?}", b);
+    unsafe fn make<T: Sized>(&self, b: Self::Addr) -> Option<&'a T> {
+        match self.addr_range_valid(b, size_of::<T>()) {
+            true => Some(transmute(*b)),
+            false => None,
         }
-        return transmute(*b);
     }
     /// This function is very similar to `make` except that it constructs
     /// a slice containing potentially multiple objects of type `T`.
     /// Otherwise everything that applies to `make` applies to this
-    ///
-    /// # Panics
-    ///
-    /// See `make`
-    ///
     /// # Safety
     ///
     /// See `make`
-    unsafe fn make_slice<T: Sized>(&self, b: Self::Addr, num: usize) -> &'a [T] {
-        match self.maybe_make_slice(b, num) {
-            None => panic!("Cannot make array with {} elements at {:?}", num, b),
-            Some(slice) => slice,
-        }
-    }
-    /// Similar to `make_slice`, but can return `None`
-    ///
-    /// # Safety
-    ///
-    /// See `make`
-    unsafe fn maybe_make_slice<T: Sized>(&self, b: Self::Addr, num: usize) -> Option<&'a [T]> {
+    unsafe fn make_slice<T: Sized>(&self, b: Self::Addr, num: usize)
+            -> Option<&'a [T]> {
         match self.addr_range_valid(b, size_of::<T>() * num) {
             true => Some(slice::from_raw_parts(transmute(*b), num)),
             false => None,
