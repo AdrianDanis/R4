@@ -4,5 +4,6 @@ extern crate x86;
 pub mod boot;
 pub mod halt;
 mod vspace;
+mod cpu;
 
 pub use self::halt::halt;

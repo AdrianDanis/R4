@@ -3,6 +3,7 @@ name = "r4"
 version = "0.0.1"
 dependencies = [
  "multiboot 0.2.0 (git+https://github.com/AdrianDanis/rust-multiboot)",
+ "raw-cpuid 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x86 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

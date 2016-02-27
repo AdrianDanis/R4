@@ -21,6 +21,7 @@ use ::core::marker::PhantomData;
 use ::core::cmp;
 use super::halt::halt;
 use super::vspace::*;
+use super::cpu;
 extern crate multiboot;
 
 extern {
@@ -159,7 +160,7 @@ unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) ->
     panic_set_plat(&mut plat);
     write!(plat, "R4: In early setup\n").unwrap();
     let (ki_start, ki_end) = get_kernel_image_region(init.high_window);
-    write!(plat, "Kernel imagine region {:?} {:?}\n", ki_start, ki_end).unwrap();
+    write!(plat, "Kernel image region {:x} {:x}\n", *ki_start, *ki_end).unwrap();
     /* Now we can continue with the rest of init */
     display_multiboot(&mut plat, &mbi);
     /* Construct early kernel allocator for memory stealing. For simplicity
@@ -182,6 +183,8 @@ unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) ->
     try!(plat.early_init());
     /* Do any platform device discovery */
     try!(plat.early_device_discovery(init.low_window));
+    /* Do early CPU initialiation */
+    try!(cpu::early_init(&mut plat));
     /* Construct kernel window */
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
