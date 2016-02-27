@@ -137,4 +137,14 @@ pub unsafe trait VSpaceWindow<'a> where Self::Addr: Copy + Clone + Debug + Deref
     ///
     /// Address should be from this window
     unsafe fn to_addr(&self, addr: usize) -> Self::Addr;
+    /// Try and convert a physical address to a virtual address
+    /// returns `None` if an invalid physical address
+    fn try_from_paddr(&self, paddr: PAddr) -> Option<Self::Addr> {
+        let addr = unsafe{self.from_paddr(paddr)};
+        if self.addr_range_valid(addr, 0) {
+            Some(addr)
+        } else {
+            None
+        }
+    }
 }

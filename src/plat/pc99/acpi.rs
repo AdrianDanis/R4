@@ -127,8 +127,9 @@ impl<'a, T:VSpaceWindow<'a>> Iterator for MADTIter<'a, T> {
             None
         } else {
             unsafe {
-                self.window.make::<MADTHeader>(self.window.from_paddr(self.start)).
-                    map(|t| {
+                self.window.try_from_paddr(self.start)
+                    .and_then(|addr| self.window.make::<MADTHeader>(addr))
+                    .map(|t| {
                         self.start.0 += t.length as usize;
                         match t.madt_type {
                             0 => MADTTable::APIC(transmute(t)),
@@ -171,8 +172,8 @@ impl<'a, T:VSpaceWindow<'a>> Iterator for RSDTIter<'a, T> {
     fn next(&mut self) -> Option<RSDTTable<'a>> {
         self.iter.as_mut()
             .and_then(|i| i.next())
-            .and_then(|h| unsafe {
-                let addr = self.window.from_paddr(PAddr(*h as usize));
+            .and_then(|h| self.window.try_from_paddr(PAddr(*h as usize)))
+            .and_then(|addr| unsafe {
                 self.window.make::<ACPIHeader>(addr)
             }).and_then(|h|
                 unsafe{Some(match &h.signature {
@@ -199,8 +200,8 @@ fn checksum<T>(base: &T, len: usize) -> bool {
 /// Find the RSDP by walking the various BIOS regions
 fn find_rsdp<'a, T: VSpaceWindow<'a>>(window: &'a T) -> Option<&'a RSDP> {
     for addr in (0xE0_000..0x100_000).step_by(16) {
-        let candidate: &RSDP = match unsafe{window.make(
-                window.from_paddr(PAddr(addr)))} {
+        let candidate: &RSDP = match unsafe{window.try_from_paddr(PAddr(addr))
+                .and_then(|addr| window.make(addr))} {
             Some(c) => c,
             None => return None,
         };
@@ -226,11 +227,8 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
     /// regions, or if the passed window cannot map the tables
     pub fn new(window: &'a T) -> Option<ACPI<'a, T>> {
         find_rsdp(window)
-            .and_then(|rsdp|
-                unsafe{window.make(
-                    window.from_paddr(PAddr(rsdp.rsdt_address as usize))
-                )}
-            )
+            .and_then(|rsdp| window.try_from_paddr(PAddr(rsdp.rsdt_address as usize)))
+            .and_then(|addr| unsafe{window.make(addr)})
             .map(|rsdt| ACPI { window: window,
                 rsdt_header: rsdt,
                 rsdt_table: PAddr(rsdt as *const ACPIHeader as usize + size_of::<ACPIHeader>())
@@ -240,10 +238,13 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
     pub fn rsdt_iter(&self) -> RSDTIter<'a, T> {
         RSDTIter { window: self.window,
             iter: unsafe{
-                    self.window.make_slice(
-                    self.window.from_paddr(self.rsdt_table),
-                    (self.rsdt_header.length as usize - size_of::<ACPIHeader>()) / size_of::<u32>()
-                )}.map(|s| s.iter())
+                    self.window.try_from_paddr(self.rsdt_table).
+                        and_then(|addr|
+                            self.window.make_slice(addr,
+                                (self.rsdt_header.length as usize - size_of::<ACPIHeader>()) / size_of::<u32>()
+                            )
+                        )
+                }.map(|s| s.iter())
         }
     }
     /// Constructs an iterator over just the MADT entries in the RSDT
