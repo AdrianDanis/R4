@@ -36,10 +36,94 @@ pub struct ACPIHeader {
 
 #[repr(packed)]
 #[derive(Debug)]
+pub struct MADTHeader {
+    madt_type: u8,
+    length: u8,
+}
+
+#[repr(packed)]
+#[derive(Debug)]
+pub struct MADTAPIC {
+    header: MADTHeader,
+    cpu_id: u8,
+    apic_id: u8,
+    flags: u32,
+}
+
+#[repr(packed)]
+#[derive(Debug)]
+pub struct MADTIOAPIC {
+    header: MADTHeader,
+    ioapic_id: u8,
+    reserved: u8,
+    addr: u32,
+    gsib: u32,
+}
+
+#[repr(packed)]
+#[derive(Debug)]
+pub struct MADTISO {
+    header: MADTHeader,
+    bus: u8,
+    source: u8,
+    gsi: u32,
+    flags: u16,
+}
+
+#[derive(Debug)]
+pub enum MADTTable<'a> {
+    APIC(&'a MADTAPIC),
+    IOAPIC(&'a MADTIOAPIC),
+    ISO(&'a MADTISO),
+    Unknown(&'a MADTHeader),
+}
+
+#[repr(packed)]
+#[derive(Debug)]
 pub struct MADT {
     header: ACPIHeader,
     apic_addr: u32,
     flags: u32,
+}
+
+impl MADT {
+    pub fn iter<'a, T:VSpaceWindow<'a>>(&self, window: &'a T) -> MADTIter<'a, T> {
+        let start = self as *const MADT as usize;
+        MADTIter {
+            window: window,
+            start: PAddr(start + size_of::<MADT>()),
+            end: PAddr(start + self.header.length as usize),
+        }
+    }
+}
+
+pub struct MADTIter<'a, T:VSpaceWindow<'a>> where T: 'a {
+    window: &'a T,
+    start: PAddr,
+    end: PAddr,
+}
+
+impl<'a, T:VSpaceWindow<'a>> Iterator for MADTIter<'a, T> {
+    type Item = MADTTable<'a>;
+    fn next(&mut self) -> Option<MADTTable<'a>> {
+        if self.start >= self.end {
+            None
+        } else {
+            unsafe {
+                self.window.make::<MADTHeader>(self.window.from_paddr(self.start)).
+                    map(|t| {
+                        self.start.0 += t.length as usize;
+                        match t.madt_type {
+                            0 => MADTTable::APIC(transmute(t)),
+                            1 => MADTTable::IOAPIC(transmute(t)),
+                            2 => MADTTable::ISO(transmute(t)),
+                            _ => MADTTable::Unknown(t),
+                        }
+                    }
+                )
+            }
+        }
+    }
 }
 
 /// ACPI walker state

@@ -84,7 +84,10 @@ impl PlatInterface for PC99Interface {
                     return Err(())
                 },
         };
-        for table in acpi.madt_iter() {
+        /* find any IOAPICs */
+        for table in acpi.madt_iter()
+                .flat_map(|s| s.iter(window))
+                .filter(|s| if let &acpi::MADTTable::IOAPIC(_) = s { true } else { false }) {
             write!(self, "Table {:?}\n", table);
         }
         Ok(())
