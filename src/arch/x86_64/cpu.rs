@@ -14,6 +14,12 @@ const IA32_PAT_MT_WRITE_PROTECTED: u8 = 0x05;
 const IA32_PAT_MT_WRITE_BACK: u8      = 0x06;
 const IA32_PAT_MT_UNCACHED: u8        = 0x07;
 
+const PAT_INDEX_WRITE_BACK: usize = 0;
+const PAT_INDEX_WRITE_THROUGH: usize = 1;
+const PAT_INDEX_UNCACHED: usize = 2;
+const PAT_INDEX_UNCACHEABLE: usize = 3;
+const PAT_INDEX_WRITE_COMBINING: usize = 4;
+
 #[derive(Copy, Clone)]
 pub struct Feature_PAT;
 
@@ -30,12 +36,12 @@ fn init_pat(pat: Feature_PAT) {
     let mut pat = unsafe{x86::msr::rdmsr(x86::msr::IA32_PAT)};
     let mut bytes: [u8; 8] = unsafe{transmute(pat)};
     /* reset the Intel defaults in the MSR */
-    bytes[0] = IA32_PAT_MT_WRITE_BACK;
-    bytes[1] = IA32_PAT_MT_WRITE_THROUGH;
-    bytes[2] = IA32_PAT_MT_UNCACHED;
-    bytes[3] = IA32_PAT_MT_UNCACHEABLE;
+    bytes[PAT_INDEX_WRITE_BACK] = IA32_PAT_MT_WRITE_BACK;
+    bytes[PAT_INDEX_WRITE_THROUGH] = IA32_PAT_MT_WRITE_THROUGH;
+    bytes[PAT_INDEX_UNCACHED] = IA32_PAT_MT_UNCACHED;
+    bytes[PAT_INDEX_UNCACHEABLE] = IA32_PAT_MT_UNCACHEABLE;
     /* add write combining */
-    bytes[4] = IA32_PAT_MT_WRITE_COMBINING;
+    bytes[PAT_INDEX_WRITE_COMBINING] = IA32_PAT_MT_WRITE_COMBINING;
     /* write the PAT back */
     pat = unsafe{transmute(bytes)};
     unsafe{x86::msr::wrmsr(x86::msr::IA32_PAT, pat)};
