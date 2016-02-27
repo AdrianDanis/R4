@@ -8,6 +8,7 @@ use types::PAddr;
 
 #[repr(packed)]
 #[derive(Debug)]
+/// ACPI defined RSDP structure
 struct RSDP {
     signature: [u8; 8],
     checksum: u8,
@@ -22,6 +23,7 @@ struct RSDP {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// General ACPI Header
 pub struct ACPIHeader {
     signature: [u8; 4],
     length: u32,
@@ -36,6 +38,7 @@ pub struct ACPIHeader {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// General MADT header
 pub struct MADTHeader {
     madt_type: u8,
     length: u8,
@@ -43,6 +46,7 @@ pub struct MADTHeader {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// MADT entry describing a CPU
 pub struct MADTAPIC {
     header: MADTHeader,
     cpu_id: u8,
@@ -52,6 +56,7 @@ pub struct MADTAPIC {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// MADT entry describing an I/O APIC
 pub struct MADTIOAPIC {
     header: MADTHeader,
     ioapic_id: u8,
@@ -62,6 +67,7 @@ pub struct MADTIOAPIC {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// MADT entry describing and Interrupt Source Override
 pub struct MADTISO {
     header: MADTHeader,
     bus: u8,
@@ -71,6 +77,7 @@ pub struct MADTISO {
 }
 
 #[derive(Debug)]
+/// Enumeration of different possible MADT tables
 pub enum MADTTable<'a> {
     APIC(&'a MADTAPIC),
     IOAPIC(&'a MADTIOAPIC),
@@ -80,6 +87,8 @@ pub enum MADTTable<'a> {
 
 #[repr(packed)]
 #[derive(Debug)]
+/// Partial MADT entry that appears in the RSDT list. This is partial as
+/// there is an implicit variable length set of MADT* structs afterwards
 pub struct MADT {
     header: ACPIHeader,
     apic_addr: u32,
@@ -87,6 +96,9 @@ pub struct MADT {
 }
 
 impl MADT {
+    /// Construct an iterator over entries inside this MADT entry
+    /// A VSpaceWindow must be passed in order to access the memory that
+    /// is beyond the initial bounds of this struct
     pub fn iter<'a, T:VSpaceWindow<'a>>(&self, window: &'a T) -> MADTIter<'a, T> {
         let start = self as *const MADT as usize;
         MADTIter {
@@ -97,9 +109,14 @@ impl MADT {
     }
 }
 
+/// Helper struct for constructing an iterator over the entries in an MADT
 pub struct MADTIter<'a, T:VSpaceWindow<'a>> where T: 'a {
+    /// Stored window for translating physical addressese of tables into
+    /// valid pointers
     window: &'a T,
+    /// Address of the next table
     start: PAddr,
+    /// Address just beyond the end of the last table
     end: PAddr,
 }
 
@@ -136,12 +153,14 @@ pub struct ACPI<'a, T> where T: VSpaceWindow<'a> + 'a {
     rsdt_table: PAddr,
 }
 
-pub struct RSDTIter<'a, T: VSpaceWindow<'a>> where T: 'a{
+/// Helper struct for iterating over the entires in the RSDT
+pub struct RSDTIter<'a, T: VSpaceWindow<'a>> where T: 'a {
     window: &'a T,
     iter: Option<slice::Iter<'a, u32>>,
 }
 
 #[derive(Debug)]
+/// Enumeration of different RSDT tables
 pub enum RSDTTable<'a> {
     MADT(&'a MADT),
     Unknown(&'a ACPIHeader),
@@ -202,6 +221,9 @@ fn extract_madt<'a>(header:RSDTTable<'a>) -> Option<&'a MADT> {
 }
 
 impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
+    /// Try and construct a new ACPI table reference. This will fail if
+    /// no reference to an ACPI table is found whilst scanning the BIOS
+    /// regions, or if the passed window cannot map the tables
     pub fn new(window: &'a T) -> Option<ACPI<'a, T>> {
         find_rsdp(window)
             .and_then(|rsdp|
@@ -214,6 +236,7 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
                 rsdt_table: PAddr(rsdt as *const ACPIHeader as usize + size_of::<ACPIHeader>())
             })
     }
+    /// Constructs an iterator over all the RSDT entries
     pub fn rsdt_iter(&self) -> RSDTIter<'a, T> {
         RSDTIter { window: self.window,
             iter: unsafe{
@@ -223,6 +246,8 @@ impl<'a, T: VSpaceWindow<'a>> ACPI<'a, T> {
                 )}.map(|s| s.iter())
         }
     }
+    /// Constructs an iterator over just the MADT entries in the RSDT
+    /// This is just filtering the results from `rsdt_iter`
     pub fn madt_iter<>(&self)
             -> FilterMap<RSDTIter<'a, T>,
                 fn(RSDTTable<'a>) -> Option<&'a MADT>>

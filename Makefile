@@ -50,5 +50,4 @@ clean:
 	rm -rf build
 
 doc: lib
-	echo $$RUSTDOC
 	cargo doc
