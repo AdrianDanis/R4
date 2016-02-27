@@ -154,12 +154,12 @@ unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) ->
      * we can get debugging output. */
     let mut plat = get_platform(&bootconfig);
     plat.init_serial();
-    write!(plat, "R4: In early setup\n").unwrap();
-    let (ki_start, ki_end) = get_kernel_image_region(init.high_window);
-    write!(plat, "Kernel imagine region {:?} {:?}\n", ki_start, ki_end).unwrap();
     /* Initialize the panic function so we can see anything
      * really bad that happens */
     panic_set_plat(&mut plat);
+    write!(plat, "R4: In early setup\n").unwrap();
+    let (ki_start, ki_end) = get_kernel_image_region(init.high_window);
+    write!(plat, "Kernel imagine region {:?} {:?}\n", ki_start, ki_end).unwrap();
     /* Now we can continue with the rest of init */
     display_multiboot(&mut plat, &mbi);
     /* Construct early kernel allocator for memory stealing. For simplicity
