@@ -5,6 +5,9 @@ use ::core::marker::PhantomData;
 use ::core::ops::Deref;
 use vspace::VSpaceWindow;
 use types::*;
+use steal_mem::StealMem;
+use plat::PlatInterfaceType;
+use super::paging::*;
 
 /// The low boot window is a 1-1 mapped 4GB window of the bottom of memory
 /// This window is used both as where the boot code initially runs before
@@ -128,4 +131,15 @@ unsafe impl<'a> VSpaceWindow<'a> for BootLowWindow<'a> {
     unsafe fn new(_: Self::InitData) -> Self {
         BootLowWindow(PhantomData)
     }
+}
+
+pub fn make_kernel_window<'a, 'w, I, W>(plat: &mut PlatInterfaceType, alloc: &mut StealMem<'a, 'w, I, W>)
+        -> Result<(), ()>
+        where I: Iterator<Item=(PAddr,PAddr)>, W:VSpaceWindow<'a> {
+    /* allocate top level PML4 */
+    let pml4_mem = unsafe {alloc.alloc(PML4::mem_align()).unwrap()};
+    let pml = pml4_mem <- PML4::default();
+    /* map in all the frames for our kernel window, up until the
+     * region for devices */
+    unimplemented!()
 }

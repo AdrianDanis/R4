@@ -186,6 +186,7 @@ unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) ->
     /* Do early CPU initialiation */
     try!(cpu::early_init(&mut plat));
     /* Construct kernel window */
+    let window = try!(make_kernel_window(&mut plat, &mut early_alloc));
     Ok(PostEarlyBootState{ plat: plat, phantom: PhantomData })
 }
 
