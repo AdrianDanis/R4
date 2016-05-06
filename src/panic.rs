@@ -29,13 +29,12 @@ pub fn panic_set_plat(plat: &mut PlatInterfaceType) {
 }
 
 /// Perform an emergency unsafe write using the panic platform reference
+#[allow(dead_code)]
 pub unsafe fn panic_write(fmt: Arguments) {
-    unsafe {
-        if let &mut Some(ref mut ptr) = &mut PLAT_REF {
-            let plat: &mut PlatInterfaceType;
-            plat = &mut *ptr.get_mut();
-            write!(plat, "{}\n", fmt).unwrap();
-        }
+    if let &mut Some(ref mut ptr) = &mut PLAT_REF {
+        let plat: &mut PlatInterfaceType;
+        plat = &mut *ptr.get_mut();
+        write!(plat, "{}\n", fmt).unwrap();
     }
 }
 

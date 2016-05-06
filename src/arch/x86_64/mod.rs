@@ -1,5 +1,5 @@
 //! x86_64 architecture implementation
-extern crate x86;
+pub extern crate x86;
 
 pub mod boot;
 pub mod halt;

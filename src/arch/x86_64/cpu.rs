@@ -10,6 +10,7 @@ use ::core::mem::transmute;
 const IA32_PAT_MT_UNCACHEABLE: u8     = 0x00;
 const IA32_PAT_MT_WRITE_COMBINING: u8 = 0x01;
 const IA32_PAT_MT_WRITE_THROUGH: u8   = 0x04;
+#[allow(dead_code)]
 const IA32_PAT_MT_WRITE_PROTECTED: u8 = 0x05;
 const IA32_PAT_MT_WRITE_BACK: u8      = 0x06;
 const IA32_PAT_MT_UNCACHED: u8        = 0x07;
@@ -21,17 +22,17 @@ const PAT_INDEX_UNCACHEABLE: usize = 3;
 const PAT_INDEX_WRITE_COMBINING: usize = 4;
 
 #[derive(Copy, Clone)]
-pub struct Feature_PAT;
+pub struct Feature_Pat;
 
 #[derive(Copy, Clone)]
 pub struct Features {
-    pat: Feature_PAT,
+    pat: Feature_Pat,
 }
 
 /// Initialize the PAT MSR to the values we expect. This is done as part
 /// of early cpu initialization because we need to do this before mapping
 /// the kernel window, as we want to use the PAT attributes when doing so
-fn init_pat(pat: Feature_PAT) {
+fn init_pat(pat: Feature_Pat) {
     /* the PAT is structured such that we can treat it as an array of bytes */
     let mut pat = unsafe{x86::msr::rdmsr(x86::msr::IA32_PAT)};
     let mut bytes: [u8; 8] = unsafe{transmute(pat)};
@@ -56,7 +57,7 @@ pub fn early_init(plat: &mut PlatInterfaceType) -> Result<Features, ()> {
     if !features.has_pat() {
         return Err(())
     }
-    let pat = Feature_PAT;
+    let pat = Feature_Pat;
     init_pat(pat);
     Ok(Features{ pat: pat })
 }

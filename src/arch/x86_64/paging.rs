@@ -1,7 +1,6 @@
 //! Definitions for paging structures
 
 use ::core::mem::size_of;
-use ::core::marker::PhantomData;
 use arch::x86_64::x86::paging;
 
 pub trait Level {
@@ -13,10 +12,10 @@ trait ParentLevel: Level {
     type Child;
 }
 
-enum PML4Table {}
-enum PDPTTable {}
-enum PDTable {}
-enum PTTable {}
+pub enum PML4Table {}
+pub enum PDPTTable {}
+pub enum PDTable {}
+pub enum PTTable {}
 
 impl Level for PML4Table {
     type Table = paging::PML4;
