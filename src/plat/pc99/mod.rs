@@ -80,7 +80,7 @@ impl PlatInterface for PC99Interface {
         let acpi = match acpi::ACPI::new(window) {
             Some(a) => a,
             None => {
-                    write!(self, "Failed to find ACPI tables\n");
+                    write!(self, "Failed to find ACPI tables\n").unwrap();
                     return Err(())
                 },
         };
@@ -88,7 +88,7 @@ impl PlatInterface for PC99Interface {
         for table in acpi.madt_iter()
                 .flat_map(|s| s.iter(window))
                 .filter(|s| if let &acpi::MADTTable::IOAPIC(_) = s { true } else { false }) {
-            write!(self, "Table {:?}\n", table);
+            write!(self, "Table {:?}\n", table).unwrap();
         }
         Ok(())
     }
