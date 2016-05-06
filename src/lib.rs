@@ -26,4 +26,4 @@ mod steal_mem;
 mod types;
 
 #[lang = "eh_personality"] extern fn eh_personality() {}
-
+#[lang = "eh_unwind_resume"] extern fn eh_unwind_resume() {}

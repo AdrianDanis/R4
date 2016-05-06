@@ -21,23 +21,19 @@ SECTIONS {
     kernel_image_start = .;
 
     .text . : AT(ADDR(.text) - KERNEL_OFFSET) {
-        *(.text)
-        *(.text.*)
+        *(.text*)
     }
 
     .rodata . : AT(ADDR(.rodata) - KERNEL_OFFSET) {
-        *(.rodata)
-        *(.rodata.*)
+        *(.rodata*)
     }
 
     .data . : AT(ADDR(.data) - KERNEL_OFFSET) {
-        *(.data)
-        *(.data.*)
+        *(.data*)
     }
 
     .bss . : AT(ADDR(.bss) - KERNEL_OFFSET) {
-        *(.bss)
-        *(.bss.*)
+        *(.bss*)
         *(COMMON)
     }
 
@@ -50,4 +46,3 @@ SECTIONS {
         *(.comment)
     }
 }
-

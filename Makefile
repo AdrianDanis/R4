@@ -1,13 +1,15 @@
 #TODO: Refactor some of this to support options etc for other architectures
 ARCH := x86_64
 TARGET := $(ARCH)-unknown-r4-nofloat
-LDFLAGS := -nostdlib -Wl,-n -Wl,--gc-sections -Wl,--build-id=none
+LDFLAGS := -nostdlib -Wl,-n -Wl,--gc-sections -Wl,--build-id=none -Wl,-z,max-page-size=0x1000
 ASFLAGS :=
 CARGOFLAGS :=
-RUSTFLAGS := -Z no-landing-pads
+RUSTFLAGS := -Z no-landing-pads -C no-stack-check
 GCC := gcc
 DEBUG ?= y
 RUSTDOC=$(shell pwd)/rustdoc.sh
+RUST_TARGET_PATH=$(shell pwd)
+export RUST_TARGET_PATH
 
 export RUSTDOC
 
@@ -39,7 +41,7 @@ $(KERNEL)-elf64: $(ofiles) $(LINKER_SCRIPT) lib
 	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB) $(wildcard $(RUST_DEPS_DIR)/*)
 
 lib:
-	cargo rustc --target $(TARGET) --features disable_float $(CARGOFLAGS) --verbose -- $(RUSTFLAGS)
+	cargo rustc --target $(TARGET) $(CARGOFLAGS) --verbose -- $(RUSTFLAGS)
 
 build/arch/$(ARCH)/%.o: src/arch/$(ARCH)/%.S
 	mkdir -p $(shell dirname $@)
