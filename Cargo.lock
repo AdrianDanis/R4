@@ -2,7 +2,7 @@
 name = "r4"
 version = "0.0.1"
 dependencies = [
- "multiboot 0.2.0 (git+https://github.com/AdrianDanis/rust-multiboot)",
+ "multiboot 0.2.0 (git+https://github.com/gz/rust-multiboot)",
  "raw-cpuid 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rlibc 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "x86 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -30,7 +30,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "multiboot"
 version = "0.2.0"
-source = "git+https://github.com/AdrianDanis/rust-multiboot#5198878106060c96f9bf9dedae29c77a85af9b22"
+source = "git+https://github.com/gz/rust-multiboot#75898e221b3b79b04aae1143c8af5b46416b1765"
 
 [[package]]
 name = "num"

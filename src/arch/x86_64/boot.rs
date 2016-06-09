@@ -137,7 +137,7 @@ impl<'a, F: Fn(u64, usize) -> Option<&'a [u8]>> Iterator for BIMemIterator<'a, F
 /// initial state
 unsafe fn try_early_boot_system<'a, 'h, 'l>(init: EarlyBootState<'a, 'h, 'l>) -> Result<PostEarlyBootState<'h>, ()> {
     /* check that we are multi-booted */
-    if init.mbi_magic as u64 != multiboot::SIGNATURE_RAX {
+    if init.mbi_magic as u32 != multiboot::SIGNATURE_EAX {
         return Err(());
     }
     /* construct a reference to the mbi to get all of our boot information */

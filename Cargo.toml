@@ -9,8 +9,7 @@ crate-type = ["staticlib"]
 
 [dependencies]
 rlibc = "1.0.0"
-#multiboot = "0.2.0"
-multiboot = {git = "https://github.com/AdrianDanis/rust-multiboot"}
+multiboot = {git = "https://github.com/gz/rust-multiboot"}
 x86 = "0.6.0"
 raw-cpuid = "2.0.0"
 
