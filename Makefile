@@ -38,7 +38,7 @@ $(KERNEL): $(KERNEL)-elf64
 	objcopy --strip-unneeded -O elf32-i386 $< $@
 
 $(KERNEL)-elf64: $(ofiles) $(LINKER_SCRIPT) lib
-	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB) $(wildcard $(RUST_DEPS_DIR)/*)
+	$(GCC) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $(ofiles) $(KERNEL_LIB) $(wildcard $(RUST_DEPS_DIR)/*.rlib)
 
 lib:
 	cargo rustc --target $(TARGET) $(CARGOFLAGS) --verbose -- $(RUSTFLAGS)
