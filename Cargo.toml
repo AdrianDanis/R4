@@ -14,6 +14,9 @@ multiboot = {git = "https://github.com/AdrianDanis/rust-multiboot"}
 x86 = "0.6.0"
 raw-cpuid = "2.0.0"
 
+[profile.dev]
+panic = 'abort'
+
 [profile.release]
 lto = true
 panic = 'abort'
